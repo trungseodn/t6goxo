@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ZTTeam: Dịch vụ nền tạo Ảnh Bìa & Avatar Facebook tự động qua Muse.ai
  * Tác giả: ZTTeam (t6.goxo.us)
  * Cổng Chrome Debugger chuyên biệt: 9245 (hoặc chỉ định qua --chrome-port)

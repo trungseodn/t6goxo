@@ -459,8 +459,16 @@ export class ZTTeamFacebookService {
    * ZTTeam: Lấy danh sách Doanh Nghiệp (BM) kèm cấu trúc tài sản (Apps, System Users, Pages)
    */
   async ztteam_getBusinessesWithAssets(userId: string) {
+    const user = await this.prisma.ztteam_users.findUnique({ where: { id: userId } });
+    const isAdmin = !user || user.role === 'ADMIN';
+
+    let whereClause: any = {};
+    if (!isAdmin) {
+      whereClause.owner_user_id = userId;
+    }
+
     const fbAccounts = await this.prisma.ztteam_fb_accounts.findMany({
-      where: { owner_user_id: userId },
+      where: whereClause,
       include: {
         pages: {
           select: {
@@ -483,6 +491,8 @@ export class ZTTeamFacebookService {
 
     return fbAccounts.map(acc => ({
       id: acc.id,
+      name: acc.name,
+      systemUserName: acc.name,
       fbUserId: acc.fb_user_id,
       accountType: acc.business_id ? (acc.account_type || 'SYSTEM_USER') : 'PERSONAL',
       businessId: acc.business_id,
