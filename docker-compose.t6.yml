@@ -76,3 +76,4 @@ volumes:
 networks:
   ztreel6_net:
     driver: bridge
+
