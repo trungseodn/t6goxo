@@ -10,10 +10,7 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  const email = 'admin@example.com';
-  const password = 'password123';
-  
+async function seedUser(email, password) {
   const salt = await bcrypt.genSalt(10);
   const password_hash = await bcrypt.hash(password, salt);
 
@@ -30,7 +27,12 @@ async function main() {
     },
   });
 
-  console.log('Admin user updated/created successfully: admin@example.com / password123');
+  console.log(`User created/updated: ${email} / ${password}`);
+}
+
+async function main() {
+  await seedUser('admin@example.com', 'password123');
+  await seedUser('trungseodn@gmail.com', 'password123');
 }
 
 main()
