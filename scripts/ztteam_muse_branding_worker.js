@@ -110,9 +110,9 @@ async function ztteam_isChromeRunning() {
 async function ztteam_sendPromptToMuse(page, promptText) {
   console.log(`✍️ [${WORKER_NAME}] Đang nhập prompt vào Muse.ai...`);
   
-  /** Đóng dấu các tin nhắn và ảnh cũ */
+  /** Đóng dấu tất cả các tin nhắn, bong bóng ảnh cũ */
   await page.evaluate(() => {
-    document.querySelectorAll('[data-message-author-role="assistant"], .prose, img').forEach(el => {
+    document.querySelectorAll('[data-message-author-role="assistant"], .prose, img, button.hatch-chat-groupable-bubble').forEach(el => {
       el.setAttribute('data-ztteam-old', 'true');
     });
   });
@@ -143,38 +143,26 @@ async function ztteam_sendPromptToMuse(page, promptText) {
 
   /** Bấm nút gửi */
   console.log(`🚀 [${WORKER_NAME}] Đang bấm Gửi...`);
-  await page.evaluate(() => {
+  const isClicked = await page.evaluate(() => {
     const ta = document.querySelector('textarea');
     if (!ta) return false;
+
+    // Tìm chính xác nút Send của Hatch Composer
+    const sendBtn = document.querySelector('button[aria-label="Send"], button[data-pel-click="chat_send_message"], [data-hatch-composer-action="send"] button');
+    if (sendBtn && !sendBtn.disabled) {
+      sendBtn.click();
+      return true;
+    }
 
     const allButtons = Array.from(document.querySelectorAll('button'));
     let targetBtn = allButtons.find(b => {
       if (b.disabled) return false;
+      if (b.closest('[aria-hidden="true"]') || b.closest('[inert]')) return false;
       const aria = (b.getAttribute('aria-label') || '').toLowerCase();
       const title = (b.getAttribute('title') || '').toLowerCase();
       const text = (b.innerText || '').toLowerCase();
       return aria.includes('gửi') || aria.includes('send') || title.includes('gửi') || title.includes('send') || text.includes('gửi') || text.includes('send');
     });
-
-    if (!targetBtn && ta.parentElement) {
-      let parent = ta.parentElement;
-      for (let i = 0; i < 5 && parent; i++) {
-        const btns = Array.from(parent.querySelectorAll('button'));
-        for (const b of btns) {
-          if (b.disabled) continue;
-          const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-          if (aria.includes('đính kèm') || aria.includes('attach') || aria.includes('xóa') || aria.includes('close') || b.querySelector('input[type="file"]')) {
-            continue;
-          }
-          if (b.querySelector('svg')) {
-            targetBtn = b;
-            break;
-          }
-        }
-        if (targetBtn) break;
-        parent = parent.parentElement;
-      }
-    }
 
     if (targetBtn && !targetBtn.disabled) {
       targetBtn.click();
@@ -182,6 +170,13 @@ async function ztteam_sendPromptToMuse(page, promptText) {
     }
     return false;
   });
+
+  if (!isClicked) {
+    try {
+      await textarea.focus();
+      await page.keyboard.press('Enter');
+    } catch (e) {}
+  }
 
   /** Đánh dấu thời điểm gửi tin nhắn */
   await page.evaluate(() => {
@@ -206,52 +201,64 @@ async function ztteam_waitForAndExtractImage(page, label, timeoutSec = 240) {
     const elapsed = Math.round((Date.now() - startTime) / 1000);
 
     const checkResult = await page.evaluate(() => {
-      const allButtons = Array.from(document.querySelectorAll('button'));
-      const isGenerating = allButtons.some(b => {
-        const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-        const title = (b.getAttribute('title') || '').toLowerCase();
-        return aria.includes('dừng') || aria.includes('stop') || title.includes('dừng') || title.includes('stop');
-      });
-
-      /** Tìm ảnh mới được tạo bởi assistant */
-      const assistantBubbles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], .prose')).filter(el => {
-        return el.getAttribute('data-ztteam-old') !== 'true';
-      });
-
-      let foundImgSrc = null;
-      for (const bubble of assistantBubbles) {
-        const imgs = Array.from(bubble.querySelectorAll('img')).filter(img => {
-          const isAvatar = img.closest('.rounded-full') !== null || (img.width <= 48 && img.height <= 48);
-          return !isAvatar && img.getAttribute('data-ztteam-old') !== 'true' && img.src;
-        });
-
-        if (imgs.length > 0) {
-          foundImgSrc = imgs[imgs.length - 1].src;
-          break;
+      // 1. Kiểm tra chính xác trạng thái đang sinh ảnh (isGenerating)
+      // Trong Hatch Composer của Muse.ai, nút Stop nằm trong div[data-hatch-composer-action="stop"].
+      // Khi rảnh rỗi (idle), container này có style="opacity: 0", inert và aria-hidden="true".
+      let isGenerating = false;
+      const stopContainer = document.querySelector('[data-hatch-composer-action="stop"]');
+      if (stopContainer) {
+        const isAriaHidden = stopContainer.getAttribute('aria-hidden') === 'true';
+        const isInert = stopContainer.hasAttribute('inert');
+        const style = window.getComputedStyle(stopContainer);
+        isGenerating = !isAriaHidden && !isInert && style.opacity !== '0' && style.display !== 'none' && style.visibility !== 'hidden';
+      } else {
+        const stopBtn = document.querySelector('button[aria-label="Stop"], button[data-testid="hatch-composer-stop-button"]');
+        if (stopBtn) {
+          const isAriaHidden = stopBtn.closest('[aria-hidden="true"]') !== null;
+          const isInert = stopBtn.closest('[inert]') !== null;
+          const style = window.getComputedStyle(stopBtn);
+          isGenerating = !isAriaHidden && !isInert && style.opacity !== '0' && style.display !== 'none';
         }
       }
 
-      /** Nếu không có trong assistant bubble, quét toàn trang cho ảnh mới xuất hiện */
-      if (!foundImgSrc) {
-        const allNewImgs = Array.from(document.querySelectorAll('img')).filter(img => {
-          const isAvatar = img.closest('.rounded-full') !== null || (img.width <= 48 && img.height <= 48);
-          return !isAvatar && img.getAttribute('data-ztteam-old') !== 'true' && img.src && !img.src.includes('avatar');
-        });
-        if (allNewImgs.length > 0) {
-          foundImgSrc = allNewImgs[allNewImgs.length - 1].src;
-        }
+      // 2. Tìm ảnh mới xuất hiện (loại trừ các ảnh cũ đã đánh dấu data-ztteam-old)
+      const allImgs = Array.from(document.querySelectorAll('img')).filter(img => {
+        // Bỏ qua avatar nhỏ của user hoặc trợ lý
+        if (img.closest('.rounded-full')) return false;
+        if (img.width > 0 && img.width <= 48 && img.height > 0 && img.height <= 48) return false;
+        if (img.getAttribute('data-ztteam-old') === 'true') return false;
+        if (!img.src) return false;
+        return true;
+      });
+
+      let foundImgSrc = null;
+      let imgDimensions = null;
+      if (allImgs.length > 0) {
+        const latestImg = allImgs[allImgs.length - 1];
+        foundImgSrc = latestImg.src;
+        imgDimensions = {
+          w: latestImg.width,
+          h: latestImg.height,
+          nw: latestImg.naturalWidth,
+          nh: latestImg.naturalHeight
+        };
       }
 
       return {
         isGenerating,
         foundImgSrc,
-        hasBubbles: assistantBubbles.length > 0
+        imgDimensions,
+        totalNewImgs: allImgs.length
       };
     });
 
-    process.stdout.write(`\r   ⏱️ [${WORKER_NAME}] [${label}] Đang tạo: ${elapsed}s | Sinh ảnh: ${checkResult.isGenerating ? 'ĐANG CHẠY' : 'ĐÃ DỪNG'} | Phát hiện ảnh: ${checkResult.foundImgSrc ? 'CÓ' : 'Chưa'}...`);
+    process.stdout.write(`\r   ⏱️ [${WORKER_NAME}] [${label}] Đang tạo: ${elapsed}s | Sinh ảnh: ${checkResult.isGenerating ? 'ĐANG CHẠY' : 'ĐÃ DỪNG'} | Phát hiện ảnh: ${checkResult.foundImgSrc ? 'CÓ (' + (checkResult.imgDimensions?.nw || checkResult.imgDimensions?.w || 'OK') + 'px)' : 'Chưa'}...   `);
 
-    if (checkResult.foundImgSrc && !checkResult.isGenerating && elapsed >= 10) {
+    // Điều kiện hoàn tất an toàn:
+    // Có ảnh mới VÀ (Muse đã dừng sinh HOẶC sau 45s đã có ảnh lớn hoàn chỉnh >= 400px)
+    const hasValidImage = checkResult.foundImgSrc && (!checkResult.imgDimensions || checkResult.imgDimensions.nw >= 300 || checkResult.imgDimensions.w >= 150);
+
+    if (hasValidImage && (!checkResult.isGenerating || elapsed >= 45) && elapsed >= 8) {
       console.log(`\n🎉 [${WORKER_NAME}] Đã hoàn tất tạo [${label}] sau ${elapsed} giây!`);
       
       /** Trích xuất dữ liệu ảnh */
@@ -341,7 +348,7 @@ async function ztteam_processBrandingJob(job) {
       const avatarPrompt = (job.avatarPrompt || `Thiết kế ảnh đại diện (avatar icon) hình vuông tỉ lệ 1:1 cho fanpage "${pageName}", phong cách chuyên nghiệp, hiện đại, sắc nét 4K 1024x1024`).replace(/\{PAGE_NAME\}/g, pageName);
       
       await ztteam_sendPromptToMuse(page, avatarPrompt);
-      const avatarBuffer = await ztteam_waitForAndExtractImage(page, 'Avatar', 180);
+      const avatarBuffer = await ztteam_waitForAndExtractImage(page, 'Avatar', 240);
       fs.writeFileSync(localAvatarPath, avatarBuffer);
       console.log(`💾 [${WORKER_NAME}] Đã lưu Avatar tạm: ${localAvatarPath} (${Math.round(avatarBuffer.length / 1024)} KB)`);
       avatarGenerated = true;
@@ -383,7 +390,7 @@ async function ztteam_processBrandingJob(job) {
       const coverPrompt = (job.coverPrompt || `Thiết kế ảnh bìa (cover banner) Facebook ngang tỉ lệ 16:9 (1920x1080) cho fanpage "${pageName}", chủ đề hấp dẫn, bố cục cân đối chừa khoảng trống cho avatar`).replace(/\{PAGE_NAME\}/g, pageName);
       
       await ztteam_sendPromptToMuse(page, coverPrompt);
-      const coverBuffer = await ztteam_waitForAndExtractImage(page, 'Cover', 180);
+      const coverBuffer = await ztteam_waitForAndExtractImage(page, 'Cover', 240);
       fs.writeFileSync(localCoverPath, coverBuffer);
       console.log(`💾 [${WORKER_NAME}] Đã lưu Cover tạm: ${localCoverPath} (${Math.round(coverBuffer.length / 1024)} KB)`);
       coverGenerated = true;
