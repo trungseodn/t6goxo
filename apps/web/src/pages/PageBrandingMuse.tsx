@@ -5,7 +5,7 @@ import { useUIStore } from '../stores/uiStore';
 import CustomDropdown from '../components/CustomDropdown';
 import api from '../services/api';
 
-/** Danh sách Preset Chủ Đề được tối ưu hóa cho Muse.ai */
+/** Danh sách Preset Chủ Đề được tối ưu hóa cho Muse.ai & Meta Graph API */
 const THEME_PRESETS = [
   {
     id: 'story_narrative',
@@ -13,6 +13,8 @@ const THEME_PRESETS = [
     desc: 'Tone màu điện ảnh ấm áp, câu chuyện đời sống, nhân văn, tình cảm chạm đến trái tim.',
     avatarPrompt: 'Create a 1:1 square emotive profile picture avatar for a narrative storytelling page named "{PAGE_NAME}". Theme: heartfelt human stories, life drama and emotional narrative, warm golden hour lighting, deep atmospheric textures, elegant artistic symbol, 8k resolution, photorealistic.',
     coverPrompt: 'Create a breathtaking 16:9 cinematic cover banner for "{PAGE_NAME}". Theme: emotional storytelling journey, human life narrative, picturesque cinematic landscape with warm nostalgic lighting, deeply evocative atmosphere, 8k masterpiece.',
+    bioTemplate: '{PAGE_NAME} — Lắng nghe những câu chuyện đời thường, chạm đến từng góc nhỏ cảm xúc.',
+    descTemplate: 'Chào mừng bạn đến với {PAGE_NAME}. Nơi chia sẻ những câu chuyện đời sống nhân văn, sâu sắc và những bài học cuộc đời ý nghĩa mỗi ngày.',
   },
   {
     id: 'drama_story',
@@ -20,6 +22,8 @@ const THEME_PRESETS = [
     desc: 'Không khí ly kỳ, kịch tính, những tình huống trắc trở, xung đột và bài học cuộc sống.',
     avatarPrompt: 'Create a 1:1 square profile picture avatar for a drama storytelling page named "{PAGE_NAME}". Theme: life drama, emotional tension, unexpected twists, cinematic chiaroscuro lighting, high contrast, subtle iconic symbol, photorealistic, 8k.',
     coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: compelling life drama, emotional confrontation, moody atmospheric lighting, cinematic storytelling composition, photorealistic, 8k resolution.',
+    bioTemplate: '{PAGE_NAME} — Những góc khuất cuộc đời và tình huống kịch tính đến nghẹt thở.',
+    descTemplate: '{PAGE_NAME} ghi lại những câu chuyện kịch tính, số phận trớ trêu và những nút thắt bất ngờ trong cuộc sống mà bạn không thể bỏ lỡ.',
   },
   {
     id: 'inspiring_story',
@@ -27,6 +31,8 @@ const THEME_PRESETS = [
     desc: 'Ánh sáng rực rỡ, niềm hy vọng, vượt khó vươn lên và những giá trị sống tích cực.',
     avatarPrompt: 'Create a 1:1 square uplifting profile picture avatar for an inspirational storytelling page named "{PAGE_NAME}". Theme: hope, resilience, overcoming adversity, bright cinematic sunrise lighting, inspiring aesthetic emblem, photorealistic, 8k.',
     coverPrompt: 'Create an awe-inspiring 16:9 panoramic cinematic Facebook cover banner for "{PAGE_NAME}". Theme: journey of hope and triumph, breathtaking horizon, golden morning glow, cinematic storytelling, 8k resolution.',
+    bioTemplate: '{PAGE_NAME} — Vượt qua nghịch cảnh, lan tỏa niềm tin và năng lượng tích cực.',
+    descTemplate: '{PAGE_NAME} là trạm dừng tiếp thêm động lực cho bạn. Nơi hội tụ những hành trình vượt khó, câu chuyện vươn lên và niềm hy vọng bất tận.',
   },
   {
     id: 'history_mystery',
@@ -34,6 +40,8 @@ const THEME_PRESETS = [
     desc: 'Tư liệu cổ kính, bóng tối điện ảnh, chi tiết huyền bí và không gian lưu trữ tài liệu.',
     avatarPrompt: 'Create a 1:1 square iconic profile picture avatar for a storytelling page named "{PAGE_NAME}". Theme: historical mysteries, lost archives, and forgotten secrets. Cinematic dramatic lighting, rich atmospheric textures, deep shadows, 8k resolution, minimalist emblem style, photorealistic.',
     coverPrompt: 'Create a breathtaking cinematic 16:9 widescreen Facebook cover banner for "{PAGE_NAME}". Theme: ancient historical archive, mysterious documents, dramatic storytelling mood, rich vintage textures, volumetric lighting, photorealistic masterpiece, 8k.',
+    bioTemplate: '{PAGE_NAME} — Giải mã bí ẩn lịch sử và những di sản bị lãng quên của nhân loại.',
+    descTemplate: 'Khám phá quá khứ cùng {PAGE_NAME}. Hành trình tìm về những sự kiện bí ẩn, cổ vật huyền bí và các trang sử bi tráng qua từng thời kỳ.',
   },
   {
     id: 'unsolved_cases',
@@ -41,6 +49,8 @@ const THEME_PRESETS = [
     desc: 'Không khí trinh thám, điều tra bí mật, ánh đèn neon mờ ảo, bóng đêm kịch tính.',
     avatarPrompt: 'Create a 1:1 square profile picture avatar for a mystery investigation page named "{PAGE_NAME}". Theme: unsolved cold cases, detective archives, dark noir aesthetics. High contrast, cinematic chiaroscuro lighting, subtle emblem symbol, photorealistic, 8k.',
     coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: detective case files, investigative journalism, atmospheric fog, moody dramatic street lighting, photorealistic cinematic storytelling, 8k resolution.',
+    bioTemplate: '{PAGE_NAME} — Hồ sơ vụ án kinh điển, phân tích tâm lý tội phạm và sự thật chưa kể.',
+    descTemplate: 'Kênh tổng hợp hồ sơ các vụ án ly kỳ, quá trình điều tra phá án và những bí ẩn chưa có lời giải trên toàn thế giới cùng {PAGE_NAME}.',
   },
   {
     id: 'modern_editorial',
@@ -48,13 +58,17 @@ const THEME_PRESETS = [
     desc: 'Phong cách hiện đại, tương phản cao, góc nhìn báo chí và khám phá thế giới.',
     avatarPrompt: 'Create a 1:1 modern minimalist profile picture avatar for a storytelling media page named "{PAGE_NAME}". Bold visual identity, clean typography badge, striking contrast, sleek studio lighting, 8k resolution.',
     coverPrompt: 'Create an ultra-modern 16:9 documentary editorial cover banner for "{PAGE_NAME}". Dynamic composition, global perspectives, high-impact cinematic aesthetics, clean visual storytelling, 8k.',
+    bioTemplate: '{PAGE_NAME} — Khám phá góc nhìn hiện đại và nhịp sống đa sắc màu.',
+    descTemplate: '{PAGE_NAME} mang đến các góc nhìn mới mẻ, phân tích xu hướng hiện đại và những chuyển động văn hóa xã hội đặc sắc.',
   },
   {
     id: 'custom',
     name: '✍️ Tùy Biến Tự Do',
-    desc: 'Tự nhập câu lệnh prompt chi tiết theo phong cách riêng của bạn.',
+    desc: 'Tự nhập câu lệnh prompt và mô tả chi tiết theo phong cách riêng của bạn.',
     avatarPrompt: '',
     coverPrompt: '',
+    bioTemplate: '',
+    descTemplate: '',
   },
 ];
 
@@ -78,6 +92,10 @@ export default function PageBrandingMuse() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>('story_narrative');
   const [customAvatarPrompt, setCustomAvatarPrompt] = useState<string>(THEME_PRESETS[0].avatarPrompt);
   const [customCoverPrompt, setCustomCoverPrompt] = useState<string>(THEME_PRESETS[0].coverPrompt);
+  const [customBioTemplate, setCustomBioTemplate] = useState<string>(THEME_PRESETS[0].bioTemplate || '');
+  const [customDescTemplate, setCustomDescTemplate] = useState<string>(THEME_PRESETS[0].descTemplate || '');
+  const [autoApplyBioDesc, setAutoApplyBioDesc] = useState<boolean>(true);
+  const [isSubmittingBioOnly, setIsSubmittingBioOnly] = useState<boolean>(false);
   const [includePageNameText, setIncludePageNameText] = useState<boolean>(true);
   const [autoApplyFacebook, setAutoApplyFacebook] = useState<boolean>(true);
   const [brandingTargetType, setBrandingTargetType] = useState<'both' | 'avatar' | 'cover'>('both');
@@ -162,6 +180,8 @@ export default function PageBrandingMuse() {
     if (preset && themeId !== 'custom') {
       setCustomAvatarPrompt(preset.avatarPrompt);
       setCustomCoverPrompt(preset.coverPrompt);
+      if (preset.bioTemplate) setCustomBioTemplate(preset.bioTemplate);
+      if (preset.descTemplate) setCustomDescTemplate(preset.descTemplate);
     }
   };
 
@@ -211,6 +231,9 @@ export default function PageBrandingMuse() {
         pageIds: targetPages.map(p => p.id),
         customAvatarPrompt,
         customCoverPrompt,
+        customBioTemplate,
+        customDescTemplate,
+        autoApplyBioDesc,
         theme: selectedThemeId,
         autoApplyFacebook,
         brandingType: brandingTargetType,
@@ -227,6 +250,52 @@ export default function PageBrandingMuse() {
       ztteam_showToast(err.response?.data?.message || err.message || 'Lỗi khi gửi vào hàng đợi', 'error');
     } finally {
       setIsSubmittingQueue(false);
+    }
+  };
+
+  /** Cập nhật riêng Mô tả & Tiểu sử cho các Fanpage đã chọn qua Meta Graph API */
+  const handleBulkApplyDescriptionsOnly = async () => {
+    const targetPages = selectedPageIds.length > 0 
+      ? pages.filter(p => selectedPageIds.includes(p.id))
+      : filteredPages;
+
+    if (targetPages.length === 0) {
+      ztteam_showToast('Vui lòng chọn ít nhất 1 Fanpage để cập nhật mô tả', 'error');
+      return;
+    }
+
+    if (!customBioTemplate.trim() && !customDescTemplate.trim()) {
+      ztteam_showToast('Vui lòng nhập mẫu Tiểu sử (Bio) hoặc Mô tả (Description)', 'error');
+      return;
+    }
+
+    const confirm = await ztteam_showConfirm(
+      'Cập Nhật Mô Tả & Tiểu Sử Lên Facebook',
+      `Bạn chuẩn bị gửi lệnh cập nhật Mô tả & Tiểu sử trực tiếp qua Meta Graph API cho ${targetPages.length} Fanpage.\n\n` +
+      `- Chủ đề: ${THEME_PRESETS.find(t => t.id === selectedThemeId)?.name || selectedThemeId}\n` +
+      `- Giữ nguyên toàn bộ Avatar và Ảnh bìa hiện tại.\n\n` +
+      `Bạn có muốn tiếp tục áp dụng ngay?`
+    );
+
+    if (!confirm) return;
+
+    try {
+      setIsSubmittingBioOnly(true);
+      const res = await api.post('/facebook/pages/branding/bulk-apply-descriptions', {
+        pageIds: targetPages.map(p => p.id),
+        bioTemplate: customBioTemplate,
+        descTemplate: customDescTemplate,
+        theme: selectedThemeId,
+      });
+
+      if (res.data?.success) {
+        ztteam_showToast(res.data.message || `Đã cập nhật Mô tả cho ${targetPages.length} Fanpage thành công!`, 'success');
+        await refreshData();
+      }
+    } catch (err: any) {
+      ztteam_showToast(err.response?.data?.message || err.message || 'Lỗi khi cập nhật mô tả lên Facebook', 'error');
+    } finally {
+      setIsSubmittingBioOnly(false);
     }
   };
 
@@ -807,6 +876,69 @@ export default function PageBrandingMuse() {
                   <span>= Chủ đề</span>
                 </div>
               </div>
+
+              {/** Khối 4: Tiểu Sử & Mô Tả Fanpage (Bio / Description) */}
+              <div className="bg-fb-surface rounded-2xl shadow-lg border border-fb-surface-hover/50 p-5 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-fb-surface-hover/40">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-cyan-400">badge</span>
+                    <label className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                      4. Tiểu Sử & Mô Tả Fanpage Theo Chủ Đề (Bio / About)
+                    </label>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                    META GRAPH API
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {/** Ô nhập Bio ngắn */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>Tiểu sử ngắn (Bio Mobile):</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">Hiển thị dưới Tên Page (khuyến nghị dưới 100 ký tự)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={customBioTemplate}
+                      onChange={e => setCustomBioTemplate(e.target.value)}
+                      placeholder="{PAGE_NAME} — Lắng nghe những câu chuyện đời thường..."
+                      className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  {/** Ô nhập Mô tả chi tiết */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>Mô tả chi tiết (About / Description):</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">Giới thiệu sứ mệnh & nội dung của Fanpage</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={customDescTemplate}
+                      onChange={e => setCustomDescTemplate(e.target.value)}
+                      placeholder="Chào mừng bạn đến với {PAGE_NAME}. Nơi chia sẻ những câu chuyện nhân văn..."
+                      className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 pt-1">
+                    <span>Biến tự động điền:</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono">
+                      {'{PAGE_NAME}'}
+                    </span>
+                    <span>= Tên Page;</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
+                      {'{THEME}'}
+                    </span>
+                    <span>= Chủ đề</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/** Cột Phải: Cấu hình Thực thi & Nút Hành Động */}
@@ -893,9 +1025,33 @@ export default function PageBrandingMuse() {
                   <span>
                     {isSubmittingQueue
                       ? 'Đang gửi vào hàng đợi...'
-                      : `Bắt Đầu Đưa ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page Vào Hàng Đợi`}
+                      : `Đưa ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page Vào Hàng Đợi Muse`}
                   </span>
                 </button>
+
+                {/** Nút Cập nhật riêng Mô tả & Tiểu sử trực tiếp qua Meta API */}
+                <div className="pt-2 border-t border-fb-surface-hover/40 space-y-2">
+                  <div className="text-[11px] text-slate-400">
+                    Cập nhật nhanh Tiểu sử & Mô tả cho các Page đã có sẵn Avatar/Cover:
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBulkApplyDescriptionsOnly}
+                    disabled={isSubmittingBioOnly || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    className="w-full py-2.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingBioOnly ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-sm">send</span>
+                    )}
+                    <span>
+                      {isSubmittingBioOnly
+                        ? 'Đang cập nhật lên Facebook...'
+                        : `Cập Nhật Riêng Mô Tả & Bio (${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page)`}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1111,7 +1267,7 @@ export default function PageBrandingMuse() {
                       </div>
 
                       {/** Thông tin Fanpage bên dưới */}
-                      <div className="pt-6 p-4 space-y-2">
+                      <div className="pt-6 p-4 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
                           <h4 className="font-bold text-white text-sm truncate" title={page.name}>
                             {page.name}
@@ -1133,7 +1289,18 @@ export default function PageBrandingMuse() {
                           )}
                         </div>
 
-                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                        {/** Dòng Bio xem trước theo chuẩn Facebook */}
+                        {page.brandingBio ? (
+                          <p className="text-[11px] text-slate-300 italic line-clamp-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700/40">
+                            "{page.brandingBio}"
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-slate-500 italic">
+                            Chưa cài đặt tiểu sử theo chủ đề
+                          </p>
+                        )}
+
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
                           <span className="font-mono">ID: {page.fb_page_id || page.id}</span>
                           <span className="text-emerald-400/90 font-medium">{page.primarySourceWeb || 't6.goxo.us'}</span>
                         </div>

@@ -222,6 +222,14 @@ export class ZTTeamFacebookController {
     return this.facebookService.ztteam_batchApplyBranding(body || {});
   }
 
+  @Post('pages/branding/bulk-apply-descriptions')
+  ztteam_bulkApplyDescriptions(
+    @Body() body: { pageIds: string[]; bioTemplate?: string; descTemplate?: string; theme?: string },
+    @Request() req: any
+  ) {
+    return this.facebookService.ztteam_bulkApplyDescriptions(req.user?.sub || 'admin', body);
+  }
+
   @Patch('pages/:pageId/category')
   ztteam_updatePageCategory(
     @Param('pageId') pageId: string,

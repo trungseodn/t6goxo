@@ -81,6 +81,10 @@ model ztteam_pages {
   branding_theme            String?  @default("history_story")
   branding_custom_avatar_prompt String? @db.Text
   branding_custom_cover_prompt  String? @db.Text
+  branding_bio                  String?  @db.Text
+  branding_description          String?  @db.Text
+  branding_custom_bio_template  String?  @db.Text
+  branding_custom_desc_template String?  @db.Text
   branding_auto_apply       Boolean  @default(true)
   branding_error            String?  @db.Text
   branding_updated_at       DateTime?

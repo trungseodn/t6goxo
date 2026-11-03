@@ -753,6 +753,10 @@ export class ZTTeamFacebookService {
         brandingAvatarPrompt: (p as any).branding_custom_avatar_prompt || (p as any).branding_avatar_prompt || null,
         brandingCoverPrompt: (p as any).branding_custom_cover_prompt || (p as any).branding_cover_prompt || null,
         brandingError: (p as any).branding_error || null,
+        brandingBio: (p as any).branding_bio || null,
+        brandingDescription: (p as any).branding_description || null,
+        brandingCustomBioTemplate: (p as any).branding_custom_bio_template || null,
+        brandingCustomDescTemplate: (p as any).branding_custom_desc_template || null,
         hasCustomAvatar: !!(p as any).branding_avatar_url,
         hasCustomCover: !!(p as any).branding_cover_url,
         followersCount: p.follower_count,
@@ -2934,6 +2938,8 @@ export class ZTTeamFacebookService {
     coverUrl?: string;
     avatarLocalPath?: string;
     coverLocalPath?: string;
+    bio?: string;
+    description?: string;
   }) {
     const page = await this.prisma.ztteam_pages.findFirst({
       where: {
@@ -3076,6 +3082,47 @@ export class ZTTeamFacebookService {
 
     if (!updatedAvatar && !updatedCover) {
       throw new BadRequestException('Không tìm thấy file ảnh đại diện hoặc ảnh bìa hợp lệ để tải lên Facebook. Vui lòng bấm Tạo Bộ Nhận Diện trước.');
+    }
+
+    /** 2c. Gắn Mô tả & Tiểu sử (Bio/About) nếu có */
+    let updatedInfo = false;
+    const pageBio = data.bio || (page as any).branding_bio;
+    const pageDesc = data.description || (page as any).branding_description;
+    if (pageBio || pageDesc) {
+      try {
+        this.logger.log(`Đang cập nhật Tiểu sử & Mô tả Facebook cho Page ${page.name}...`);
+        const updateParams: any = { access_token: page.page_token_encrypted };
+        if (pageBio) {
+          updateParams.about = pageBio.slice(0, 255);
+          updateParams.bio = pageBio.slice(0, 101);
+        }
+        if (pageDesc) updateParams.description = pageDesc;
+
+        await firstValueFrom(
+          this.httpService.post(
+            `https://graph.facebook.com/${this.API_VERSION}/${page.fb_page_id}`,
+            null,
+            { params: updateParams }
+          )
+        );
+        updatedInfo = true;
+      } catch (e1: any) {
+        try {
+          const fallbackParams: any = { access_token: page.page_token_encrypted };
+          if (pageBio) fallbackParams.about = pageBio.slice(0, 255);
+          if (pageDesc) fallbackParams.description = pageDesc;
+          await firstValueFrom(
+            this.httpService.post(
+              `https://graph.facebook.com/${this.API_VERSION}/${page.fb_page_id}`,
+              null,
+              { params: fallbackParams }
+            )
+          );
+          updatedInfo = true;
+        } catch (e2: any) {
+          this.logger.warn(`Không thể cập nhật mô tả Facebook cho ${page.name}: ${e2.response?.data?.error?.message || e2.message}`);
+        }
+      }
     }
 
     /** 3. Cập nhật URL Avatar & Cover mới trong cơ sở dữ liệu để Web Tool đồng bộ */
@@ -3583,6 +3630,9 @@ export class ZTTeamFacebookService {
       theme = 'story_narrative',
       autoApplyFacebook = true,
       brandingType = 'both',
+      customBioTemplate,
+      customDescTemplate,
+      autoApplyBioDesc = true,
     } = body;
 
     const user = await this.prisma.ztteam_users.findUnique({ where: { id: userId } });
@@ -3643,6 +3693,23 @@ export class ZTTeamFacebookService {
         .replace(/\{CATEGORY\}/g, page.category || 'Story')
         .replace(/\{THEME\}/g, theme);
 
+      const defaultBioTemplate = customBioTemplate?.trim();
+      const defaultDescTemplate = customDescTemplate?.trim();
+
+      const pageBio = defaultBioTemplate
+        ? defaultBioTemplate
+            .replace(/\{PAGE_NAME\}/g, page.name)
+            .replace(/\{CATEGORY\}/g, page.category || 'Story')
+            .replace(/\{THEME\}/g, theme)
+        : undefined;
+
+      const pageDesc = defaultDescTemplate
+        ? defaultDescTemplate
+            .replace(/\{PAGE_NAME\}/g, page.name)
+            .replace(/\{CATEGORY\}/g, page.category || 'Story')
+            .replace(/\{THEME\}/g, theme)
+        : undefined;
+
       await this.prisma.ztteam_pages.update({
         where: { id: page.id },
         data: {
@@ -3651,6 +3718,8 @@ export class ZTTeamFacebookService {
           branding_theme: theme,
           branding_custom_avatar_prompt: pageAvatarPrompt,
           branding_custom_cover_prompt: pageCoverPrompt,
+          ...(pageBio !== undefined ? { branding_bio: pageBio, branding_custom_bio_template: defaultBioTemplate } : {}),
+          ...(pageDesc !== undefined ? { branding_description: pageDesc, branding_custom_desc_template: defaultDescTemplate } : {}),
           branding_auto_apply: autoApplyFacebook,
           branding_error: null,
           branding_updated_at: new Date(),
@@ -3951,6 +4020,105 @@ export class ZTTeamFacebookService {
       } as any
     });
     return { success: true, message: 'Đã hủy/reset trạng thái job nhận diện cho Fanpage' };
+  }
+
+  /**
+   * ZTTeam: Cập nhật đồng loạt Mô tả & Tiểu sử (Bio/About) lên Fanpage qua Meta Graph API
+   */
+  async ztteam_bulkApplyDescriptions(userId: string, body: {
+    pageIds: string[];
+    bioTemplate?: string;
+    descTemplate?: string;
+    theme?: string;
+  }) {
+    const { pageIds, bioTemplate, descTemplate, theme = 'story_narrative' } = body;
+    if (!pageIds || pageIds.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất 1 Fanpage để cập nhật mô tả');
+    }
+
+    const pages = await this.prisma.ztteam_pages.findMany({
+      where: {
+        id: { in: pageIds },
+        is_active: true
+      }
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
+    for (const page of pages) {
+      const pageBio = (bioTemplate || (page as any).branding_bio || '')
+        .replace(/\{PAGE_NAME\}/g, page.name)
+        .replace(/\{CATEGORY\}/g, page.category || 'Story')
+        .replace(/\{THEME\}/g, theme);
+
+      const pageDesc = (descTemplate || (page as any).branding_description || '')
+        .replace(/\{PAGE_NAME\}/g, page.name)
+        .replace(/\{CATEGORY\}/g, page.category || 'Story')
+        .replace(/\{THEME\}/g, theme);
+
+      // Lưu cơ sở dữ liệu
+      await this.prisma.ztteam_pages.update({
+        where: { id: page.id },
+        data: {
+          branding_bio: pageBio || null,
+          branding_description: pageDesc || null,
+          branding_custom_bio_template: bioTemplate || null,
+          branding_custom_desc_template: descTemplate || null,
+        } as any
+      });
+
+      // Đẩy lên Meta Graph API
+      if (page.page_token_encrypted && (pageBio || pageDesc)) {
+        try {
+          const updateParams: any = { access_token: page.page_token_encrypted };
+          if (pageBio) {
+            updateParams.about = pageBio.slice(0, 255);
+            updateParams.bio = pageBio.slice(0, 101);
+          }
+          if (pageDesc) updateParams.description = pageDesc;
+
+          await firstValueFrom(
+            this.httpService.post(
+              `https://graph.facebook.com/${this.API_VERSION}/${page.fb_page_id}`,
+              null,
+              { params: updateParams }
+            )
+          );
+          successCount++;
+        } catch (err: any) {
+          // Thử lại nếu trang cổ điển không hỗ trợ tham số bio
+          try {
+            const fallbackParams: any = { access_token: page.page_token_encrypted };
+            if (pageBio) fallbackParams.about = pageBio.slice(0, 255);
+            if (pageDesc) fallbackParams.description = pageDesc;
+            await firstValueFrom(
+              this.httpService.post(
+                `https://graph.facebook.com/${this.API_VERSION}/${page.fb_page_id}`,
+                null,
+                { params: fallbackParams }
+              )
+            );
+            successCount++;
+          } catch (retryErr: any) {
+            failCount++;
+            errors.push(`${page.name}: ${retryErr.response?.data?.error?.message || retryErr.message}`);
+          }
+        }
+      } else {
+        successCount++;
+      }
+    }
+
+    return {
+      success: true,
+      total: pages.length,
+      successCount,
+      failCount,
+      errors: errors.slice(0, 5),
+      message: `Đã cập nhật Mô tả & Tiểu sử cho ${successCount}/${pages.length} Fanpage thành công!`
+    };
   }
 
 }
