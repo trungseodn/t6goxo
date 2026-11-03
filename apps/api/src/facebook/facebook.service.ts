@@ -3619,6 +3619,9 @@ export class ZTTeamFacebookService {
     theme?: string;
     autoApplyFacebook?: boolean;
     brandingType?: 'both' | 'avatar' | 'cover';
+    customBioTemplate?: string;
+    customDescTemplate?: string;
+    autoApplyBioDesc?: boolean;
   }) {
     const {
       scope = 'bm',
