@@ -739,7 +739,7 @@ export class ZTTeamFacebookService {
         brandingCoverUrl: (p as any).branding_cover_url || null,
         brandingStatus: (p as any).branding_status || 'NONE',
         brandingType: (p as any).branding_type || 'both',
-        brandingTheme: (p as any).branding_theme || 'history_story',
+        brandingTheme: (p as any).branding_theme || 'story_narrative',
         brandingAvatarPrompt: (p as any).branding_custom_avatar_prompt || (p as any).branding_avatar_prompt || null,
         brandingCoverPrompt: (p as any).branding_custom_cover_prompt || (p as any).branding_cover_prompt || null,
         brandingError: (p as any).branding_error || null,
@@ -3570,7 +3570,7 @@ export class ZTTeamFacebookService {
       filterMode = 'missing_only',
       customAvatarPrompt,
       customCoverPrompt,
-      theme = 'history_story',
+      theme = 'story_narrative',
       autoApplyFacebook = true,
       brandingType = 'both',
     } = body;
@@ -3625,12 +3625,12 @@ export class ZTTeamFacebookService {
     for (const page of filteredPages) {
       const pageAvatarPrompt = defaultAvatarPrompt
         .replace(/\{PAGE_NAME\}/g, page.name)
-        .replace(/\{CATEGORY\}/g, page.category || 'Story & History')
+        .replace(/\{CATEGORY\}/g, page.category || 'Story')
         .replace(/\{THEME\}/g, theme);
 
       const pageCoverPrompt = defaultCoverPrompt
         .replace(/\{PAGE_NAME\}/g, page.name)
-        .replace(/\{CATEGORY\}/g, page.category || 'Story & History')
+        .replace(/\{CATEGORY\}/g, page.category || 'Story')
         .replace(/\{THEME\}/g, theme);
 
       await this.prisma.ztteam_pages.update({
@@ -3720,7 +3720,7 @@ export class ZTTeamFacebookService {
         pageName: pendingJob.name,
         category: pendingJob.category,
         businessName: pendingJob.fb_account?.business_name,
-        theme: (pendingJob as any).branding_theme || 'history_story',
+        theme: (pendingJob as any).branding_theme || 'story_narrative',
         type,
         needsAvatar,
         needsCover,

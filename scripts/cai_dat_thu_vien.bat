@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 title Cai Dat Thu Vien Cho Muse Worker
 cd /d "%~dp0"

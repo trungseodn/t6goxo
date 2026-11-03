@@ -8,31 +8,45 @@ import api from '../services/api';
 /** Danh sách Preset Chủ Đề được tối ưu hóa cho Muse.ai */
 const THEME_PRESETS = [
   {
+    id: 'story_narrative',
+    name: '📖 Kể Chuyện Đời Sống & Cảm Xúc (Story)',
+    desc: 'Tone màu điện ảnh ấm áp, câu chuyện đời sống, nhân văn, tình cảm chạm đến trái tim.',
+    avatarPrompt: 'Create a 1:1 square emotive profile picture avatar for a narrative storytelling page named "{PAGE_NAME}". Theme: heartfelt human stories, life drama and emotional narrative, warm golden hour lighting, deep atmospheric textures, elegant artistic symbol, 8k resolution, photorealistic.',
+    coverPrompt: 'Create a breathtaking 16:9 cinematic cover banner for "{PAGE_NAME}". Theme: emotional storytelling journey, human life narrative, picturesque cinematic landscape with warm nostalgic lighting, deeply evocative atmosphere, 8k masterpiece.',
+  },
+  {
+    id: 'drama_story',
+    name: '🎭 Kịch Tính & Góc Khuất Cuộc Đời (Drama Story)',
+    desc: 'Không khí ly kỳ, kịch tính, những tình huống trắc trở, xung đột và bài học cuộc sống.',
+    avatarPrompt: 'Create a 1:1 square profile picture avatar for a drama storytelling page named "{PAGE_NAME}". Theme: life drama, emotional tension, unexpected twists, cinematic chiaroscuro lighting, high contrast, subtle iconic symbol, photorealistic, 8k.',
+    coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: compelling life drama, emotional confrontation, moody atmospheric lighting, cinematic storytelling composition, photorealistic, 8k resolution.',
+  },
+  {
+    id: 'inspiring_story',
+    name: '✨ Câu Chuyện Truyền Cảm Hứng (Inspiring Story)',
+    desc: 'Ánh sáng rực rỡ, niềm hy vọng, vượt khó vươn lên và những giá trị sống tích cực.',
+    avatarPrompt: 'Create a 1:1 square uplifting profile picture avatar for an inspirational storytelling page named "{PAGE_NAME}". Theme: hope, resilience, overcoming adversity, bright cinematic sunrise lighting, inspiring aesthetic emblem, photorealistic, 8k.',
+    coverPrompt: 'Create an awe-inspiring 16:9 panoramic cinematic Facebook cover banner for "{PAGE_NAME}". Theme: journey of hope and triumph, breathtaking horizon, golden morning glow, cinematic storytelling, 8k resolution.',
+  },
+  {
     id: 'history_mystery',
-    name: '📜 Lịch Sử & Bí Ẩn Cổ Xưa',
+    name: '📜 Lịch Sử & Bí Ẩn Cổ Xưa (History)',
     desc: 'Tư liệu cổ kính, bóng tối điện ảnh, chi tiết huyền bí và không gian lưu trữ tài liệu.',
     avatarPrompt: 'Create a 1:1 square iconic profile picture avatar for a storytelling page named "{PAGE_NAME}". Theme: historical mysteries, lost archives, and forgotten secrets. Cinematic dramatic lighting, rich atmospheric textures, deep shadows, 8k resolution, minimalist emblem style, photorealistic.',
     coverPrompt: 'Create a breathtaking cinematic 16:9 widescreen Facebook cover banner for "{PAGE_NAME}". Theme: ancient historical archive, mysterious documents, dramatic storytelling mood, rich vintage textures, volumetric lighting, photorealistic masterpiece, 8k.',
   },
   {
     id: 'unsolved_cases',
-    name: '🔍 Hồ Sơ Vụ Án & Ly Kỳ',
+    name: '🔍 Hồ Sơ Vụ Án & Ly Kỳ (Mystery Case)',
     desc: 'Không khí trinh thám, điều tra bí mật, ánh đèn neon mờ ảo, bóng đêm kịch tính.',
     avatarPrompt: 'Create a 1:1 square profile picture avatar for a mystery investigation page named "{PAGE_NAME}". Theme: unsolved cold cases, detective archives, dark noir aesthetics. High contrast, cinematic chiaroscuro lighting, subtle emblem symbol, photorealistic, 8k.',
     coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: detective case files, investigative journalism, atmospheric fog, moody dramatic street lighting, photorealistic cinematic storytelling, 8k resolution.',
   },
   {
-    id: 'emotional_narrative',
-    name: '📖 Kể Chuyện Đời Sống & Cảm Xúc',
-    desc: 'Tone màu ấm áp, ánh hoàng hôn, câu chuyện chạm đến trái tim và sự đồng cảm.',
-    avatarPrompt: 'Create a 1:1 square emotive profile picture avatar for a narrative storytelling page named "{PAGE_NAME}". Theme: heartfelt human stories, warm golden hour lighting, deep emotional atmosphere, elegant artistic symbol, 8k resolution, photorealistic.',
-    coverPrompt: 'Create a breathtaking 16:9 cinematic cover banner for "{PAGE_NAME}". Theme: emotional storytelling journey, picturesque cinematic landscape with warm nostalgic lighting, deeply evocative atmosphere, 8k masterpiece.',
-  },
-  {
     id: 'modern_editorial',
-    name: '⚡ Khám Phá & Báo Chí Hiện Đại',
+    name: '⚡ Khám Phá & Đời Sống Hiện Đại',
     desc: 'Phong cách hiện đại, tương phản cao, góc nhìn báo chí và khám phá thế giới.',
-    avatarPrompt: 'Create a 1:1 modern minimalist profile picture avatar for a documentary media page named "{PAGE_NAME}". Bold visual identity, clean typography badge, striking contrast, sleek studio lighting, 8k resolution.',
+    avatarPrompt: 'Create a 1:1 modern minimalist profile picture avatar for a storytelling media page named "{PAGE_NAME}". Bold visual identity, clean typography badge, striking contrast, sleek studio lighting, 8k resolution.',
     coverPrompt: 'Create an ultra-modern 16:9 documentary editorial cover banner for "{PAGE_NAME}". Dynamic composition, global perspectives, high-impact cinematic aesthetics, clean visual storytelling, 8k.',
   },
   {
@@ -61,7 +75,7 @@ export default function PageBrandingMuse() {
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
   /** Cấu hình Prompt Studio */
-  const [selectedThemeId, setSelectedThemeId] = useState<string>('history_mystery');
+  const [selectedThemeId, setSelectedThemeId] = useState<string>('story_narrative');
   const [customAvatarPrompt, setCustomAvatarPrompt] = useState<string>(THEME_PRESETS[0].avatarPrompt);
   const [customCoverPrompt, setCustomCoverPrompt] = useState<string>(THEME_PRESETS[0].coverPrompt);
   const [includePageNameText, setIncludePageNameText] = useState<boolean>(true);
@@ -624,7 +638,7 @@ export default function PageBrandingMuse() {
                           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                             <span className="font-mono">ID: {page.fb_page_id || page.id}</span>
                             <span>•</span>
-                            <span className="text-emerald-400/90">{page.primarySourceWeb || 'history.imsb.info'}</span>
+                            <span className="text-emerald-400/90">{page.primarySourceWeb || 't6.goxo.us'}</span>
                           </div>
                         </div>
                       </div>
@@ -1121,7 +1135,7 @@ export default function PageBrandingMuse() {
 
                         <div className="text-[11px] text-slate-400 flex items-center justify-between">
                           <span className="font-mono">ID: {page.fb_page_id || page.id}</span>
-                          <span className="text-emerald-400/90 font-medium">{page.primarySourceWeb || 'history.imsb.info'}</span>
+                          <span className="text-emerald-400/90 font-medium">{page.primarySourceWeb || 't6.goxo.us'}</span>
                         </div>
                       </div>
                     </div>

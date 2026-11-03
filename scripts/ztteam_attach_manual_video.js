@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ZTTeam: Công cụ gắn Video MP4 đã tải về máy vào bài viết trên VPS
  * Dùng khi video đã render xong trên Muse.ai và đã tải về máy tính
  * Cách dùng: node scripts/ztteam_attach_manual_video.js <ID_BÀI_VIẾT> <ĐƯỜNG_DẪN_FILE_MP4> [3000 hoặc 3001]

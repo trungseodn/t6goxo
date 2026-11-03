@@ -1,8 +1,8 @@
-@echo off
+﻿@echo off
 title Chrome Muse T2 - Tai Khoan 1 (Port 9223)
 echo ========================================================
 echo   ZTTeam: Khoi dong Google Chrome cho Muse.ai (Tai Khoan 1)
-echo   He thong: https://t2.goxo.us (Debug Port: 9223)
+echo   He thong: https://t6.goxo.us (Debug Port: 9223)
 echo ========================================================
 
 set "CHROME_PATH=chrome.exe"

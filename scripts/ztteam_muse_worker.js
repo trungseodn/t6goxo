@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ZTTeam: Dịch vụ nền tự động hóa Muse.ai (Local Worker Đa Luồng & Chống Trùng Lặp)
  * Tác giả: ZTTeam (ztteam.site)
  * Hỗ trợ đa luồng Chrome độc lập, chống dán thừa ảnh, chống tràn RAM/DOM Leak

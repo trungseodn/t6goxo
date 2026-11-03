@@ -1,10 +1,10 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
-title ZTTeam Muse Worker - t2.goxo.us (Port 9223)
+title ZTTeam Muse Worker - t6.goxo.us (Port 9223)
 cd /d "%~dp0"
 echo ========================================================
-echo   ZTTeam Muse Worker - He Thong Doc Lap t2.goxo.us
-echo   Chi phuc vu duy nhat: https://t2.goxo.us (Chrome Port 9223)
+echo   ZTTeam Muse Worker - He Thong Doc Lap t6.goxo.us
+echo   Chi phuc vu duy nhat: https://t6.goxo.us (Chrome Port 9223)
 echo ========================================================
 echo.
 
@@ -15,5 +15,5 @@ if not exist "node_modules\puppeteer-core\" if not exist "node_modules\puppeteer
     echo.
 )
 
-node ztteam_muse_worker.js --target=https://t2.goxo.us --chrome-port=9223
+node ztteam_muse_worker.js --target=https://t6.goxo.us --chrome-port=9223
 pause

@@ -1,9 +1,9 @@
-================================================================================
-          ZTTEAM MUSE WORKER (MULTI-ACCOUNT CHROME) - T2.GOXO.US
+﻿================================================================================
+          ZTTEAM MUSE WORKER (MULTI-ACCOUNT CHROME) - t6.goxo.us
 ================================================================================
 
 Thư mục này là gói công cụ độc lập hoàn chỉnh để tự động hóa tạo Video Reel trên Muse.ai
-kết nối trực tiếp tới máy chủ https://t2.goxo.us.
+kết nối trực tiếp tới máy chủ https://t6.goxo.us.
 Bạn có thể copy thư mục "t2_script" này sang bất kỳ máy tính Windows nào để chạy.
 
 YÊU CẦU:
