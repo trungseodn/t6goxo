@@ -5,7 +5,7 @@ import { useUIStore } from '../stores/uiStore';
 import CustomDropdown from '../components/CustomDropdown';
 import api from '../services/api';
 
-/** Danh sách Preset Chủ Đề được tối ưu hóa cho Muse.ai & Meta Graph API */
+/** Danh sách Preset Chủ Đề được tối ưu hóa cho Muse.ai & Meta Graph API (100% English Bio & Description) */
 const THEME_PRESETS = [
   {
     id: 'story_narrative',
@@ -13,8 +13,8 @@ const THEME_PRESETS = [
     desc: 'Tone màu điện ảnh ấm áp, câu chuyện đời sống, nhân văn, tình cảm chạm đến trái tim.',
     avatarPrompt: 'Create a 1:1 square emotive profile picture avatar for a narrative storytelling page named "{PAGE_NAME}". Theme: heartfelt human stories, life drama and emotional narrative, warm golden hour lighting, deep atmospheric textures, elegant artistic symbol, 8k resolution, photorealistic.',
     coverPrompt: 'Create a breathtaking 16:9 cinematic cover banner for "{PAGE_NAME}". Theme: emotional storytelling journey, human life narrative, picturesque cinematic landscape with warm nostalgic lighting, deeply evocative atmosphere, 8k masterpiece.',
-    bioTemplate: '{PAGE_NAME} — Lắng nghe những câu chuyện đời thường, chạm đến từng góc nhỏ cảm xúc.',
-    descTemplate: 'Chào mừng bạn đến với {PAGE_NAME}. Nơi chia sẻ những câu chuyện đời sống nhân văn, sâu sắc và những bài học cuộc đời ý nghĩa mỗi ngày.',
+    bioTemplate: '{PAGE_NAME} — Heartfelt human stories & inspiring life journeys.',
+    descTemplate: 'Welcome to {PAGE_NAME}. Your daily destination for emotional life stories, heartwarming human experiences, and touching narratives that inspire and heal.',
   },
   {
     id: 'drama_story',
@@ -22,8 +22,8 @@ const THEME_PRESETS = [
     desc: 'Không khí ly kỳ, kịch tính, những tình huống trắc trở, xung đột và bài học cuộc sống.',
     avatarPrompt: 'Create a 1:1 square profile picture avatar for a drama storytelling page named "{PAGE_NAME}". Theme: life drama, emotional tension, unexpected twists, cinematic chiaroscuro lighting, high contrast, subtle iconic symbol, photorealistic, 8k.',
     coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: compelling life drama, emotional confrontation, moody atmospheric lighting, cinematic storytelling composition, photorealistic, 8k resolution.',
-    bioTemplate: '{PAGE_NAME} — Những góc khuất cuộc đời và tình huống kịch tính đến nghẹt thở.',
-    descTemplate: '{PAGE_NAME} ghi lại những câu chuyện kịch tính, số phận trớ trêu và những nút thắt bất ngờ trong cuộc sống mà bạn không thể bỏ lỡ.',
+    bioTemplate: '{PAGE_NAME} — Gripping life drama, shocking twists & raw human emotions.',
+    descTemplate: 'Welcome to {PAGE_NAME}. Dive into captivating life dramas, unexpected plot twists, real-world confessions, and deep emotional turning points you cannot miss.',
   },
   {
     id: 'inspiring_story',
@@ -31,8 +31,8 @@ const THEME_PRESETS = [
     desc: 'Ánh sáng rực rỡ, niềm hy vọng, vượt khó vươn lên và những giá trị sống tích cực.',
     avatarPrompt: 'Create a 1:1 square uplifting profile picture avatar for an inspirational storytelling page named "{PAGE_NAME}". Theme: hope, resilience, overcoming adversity, bright cinematic sunrise lighting, inspiring aesthetic emblem, photorealistic, 8k.',
     coverPrompt: 'Create an awe-inspiring 16:9 panoramic cinematic Facebook cover banner for "{PAGE_NAME}". Theme: journey of hope and triumph, breathtaking horizon, golden morning glow, cinematic storytelling, 8k resolution.',
-    bioTemplate: '{PAGE_NAME} — Vượt qua nghịch cảnh, lan tỏa niềm tin và năng lượng tích cực.',
-    descTemplate: '{PAGE_NAME} là trạm dừng tiếp thêm động lực cho bạn. Nơi hội tụ những hành trình vượt khó, câu chuyện vươn lên và niềm hy vọng bất tận.',
+    bioTemplate: '{PAGE_NAME} — Empowering stories of resilience, hope & triumphant journeys.',
+    descTemplate: 'Welcome to {PAGE_NAME}. Fuel your daily inspiration with remarkable real-life stories of overcoming adversity, boundless hope, and human triumph.',
   },
   {
     id: 'history_mystery',
@@ -40,8 +40,8 @@ const THEME_PRESETS = [
     desc: 'Tư liệu cổ kính, bóng tối điện ảnh, chi tiết huyền bí và không gian lưu trữ tài liệu.',
     avatarPrompt: 'Create a 1:1 square iconic profile picture avatar for a storytelling page named "{PAGE_NAME}". Theme: historical mysteries, lost archives, and forgotten secrets. Cinematic dramatic lighting, rich atmospheric textures, deep shadows, 8k resolution, minimalist emblem style, photorealistic.',
     coverPrompt: 'Create a breathtaking cinematic 16:9 widescreen Facebook cover banner for "{PAGE_NAME}". Theme: ancient historical archive, mysterious documents, dramatic storytelling mood, rich vintage textures, volumetric lighting, photorealistic masterpiece, 8k.',
-    bioTemplate: '{PAGE_NAME} — Giải mã bí ẩn lịch sử và những di sản bị lãng quên của nhân loại.',
-    descTemplate: 'Khám phá quá khứ cùng {PAGE_NAME}. Hành trình tìm về những sự kiện bí ẩn, cổ vật huyền bí và các trang sử bi tráng qua từng thời kỳ.',
+    bioTemplate: '{PAGE_NAME} — Uncovering lost history, ancient secrets & forgotten empires.',
+    descTemplate: 'Step into the past with {PAGE_NAME}. Explore legendary historical enigmas, ancient civilizations, secret archives, and dramatic chronicles of world history.',
   },
   {
     id: 'unsolved_cases',
@@ -49,8 +49,8 @@ const THEME_PRESETS = [
     desc: 'Không khí trinh thám, điều tra bí mật, ánh đèn neon mờ ảo, bóng đêm kịch tính.',
     avatarPrompt: 'Create a 1:1 square profile picture avatar for a mystery investigation page named "{PAGE_NAME}". Theme: unsolved cold cases, detective archives, dark noir aesthetics. High contrast, cinematic chiaroscuro lighting, subtle emblem symbol, photorealistic, 8k.',
     coverPrompt: 'Create an intense 16:9 cinematic widescreen Facebook cover banner for "{PAGE_NAME}". Theme: detective case files, investigative journalism, atmospheric fog, moody dramatic street lighting, photorealistic cinematic storytelling, 8k resolution.',
-    bioTemplate: '{PAGE_NAME} — Hồ sơ vụ án kinh điển, phân tích tâm lý tội phạm và sự thật chưa kể.',
-    descTemplate: 'Kênh tổng hợp hồ sơ các vụ án ly kỳ, quá trình điều tra phá án và những bí ẩn chưa có lời giải trên toàn thế giới cùng {PAGE_NAME}.',
+    bioTemplate: '{PAGE_NAME} — True crime files, mysterious cases & investigative deep dives.',
+    descTemplate: 'Welcome to {PAGE_NAME}. Exploring eerie cold case files, forensic investigations, unsolved mysteries, and psychological deep dives from around the world.',
   },
   {
     id: 'modern_editorial',
@@ -58,17 +58,17 @@ const THEME_PRESETS = [
     desc: 'Phong cách hiện đại, tương phản cao, góc nhìn báo chí và khám phá thế giới.',
     avatarPrompt: 'Create a 1:1 modern minimalist profile picture avatar for a storytelling media page named "{PAGE_NAME}". Bold visual identity, clean typography badge, striking contrast, sleek studio lighting, 8k resolution.',
     coverPrompt: 'Create an ultra-modern 16:9 documentary editorial cover banner for "{PAGE_NAME}". Dynamic composition, global perspectives, high-impact cinematic aesthetics, clean visual storytelling, 8k.',
-    bioTemplate: '{PAGE_NAME} — Khám phá góc nhìn hiện đại và nhịp sống đa sắc màu.',
-    descTemplate: '{PAGE_NAME} mang đến các góc nhìn mới mẻ, phân tích xu hướng hiện đại và những chuyển động văn hóa xã hội đặc sắc.',
+    bioTemplate: '{PAGE_NAME} — Fresh perspectives, cultural trends & modern life insights.',
+    descTemplate: 'Welcome to {PAGE_NAME}. Delivering fresh perspectives on contemporary society, cultural trends, and compelling visual stories that shape our modern world.',
   },
   {
     id: 'custom',
     name: '✍️ Tùy Biến Tự Do',
-    desc: 'Tự nhập câu lệnh prompt và mô tả chi tiết theo phong cách riêng của bạn.',
+    desc: 'Tự nhập câu lệnh prompt và mô tả chi tiết theo phong cách riêng của bạn (100% English).',
     avatarPrompt: '',
     coverPrompt: '',
-    bioTemplate: '',
-    descTemplate: '',
+    bioTemplate: '{PAGE_NAME} — Daily stories, original highlights & meaningful moments.',
+    descTemplate: 'Welcome to the official page of {PAGE_NAME}. Follow us for inspiring stories, original content, and daily community updates.',
   },
 ];
 
@@ -83,22 +83,25 @@ export default function PageBrandingMuse() {
   /** Bộ lọc BM & Tìm kiếm */
   const [selectedBm, setSelectedBm] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterMode, setFilterMode] = useState<'missing_only' | 'missing_cover' | 'missing_avatar' | 'has_branding' | 'all'>('missing_only');
+  const [filterMode, setFilterMode] = useState<'missing_only' | 'missing_cover' | 'missing_avatar' | 'missing_bio' | 'has_branding' | 'all'>('missing_only');
 
   /** Danh sách ID Page được chọn */
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
-  /** Cấu hình Prompt Studio */
+  /** Cấu hình Tác Vụ Độc Lập (Có thể chọn riêng không bắt buộc đi kèm với avatar) */
+  const [enableAvatar, setEnableAvatar] = useState<boolean>(true);
+  const [enableCover, setEnableCover] = useState<boolean>(true);
+  const [enableBioDesc, setEnableBioDesc] = useState<boolean>(true);
+
+  /** Cấu hình Prompt Studio & Bio/Desc */
   const [selectedThemeId, setSelectedThemeId] = useState<string>('story_narrative');
   const [customAvatarPrompt, setCustomAvatarPrompt] = useState<string>(THEME_PRESETS[0].avatarPrompt);
   const [customCoverPrompt, setCustomCoverPrompt] = useState<string>(THEME_PRESETS[0].coverPrompt);
   const [customBioTemplate, setCustomBioTemplate] = useState<string>(THEME_PRESETS[0].bioTemplate || '');
   const [customDescTemplate, setCustomDescTemplate] = useState<string>(THEME_PRESETS[0].descTemplate || '');
-  const [autoApplyBioDesc, setAutoApplyBioDesc] = useState<boolean>(true);
   const [isSubmittingBioOnly, setIsSubmittingBioOnly] = useState<boolean>(false);
   const [includePageNameText, setIncludePageNameText] = useState<boolean>(true);
   const [autoApplyFacebook, setAutoApplyFacebook] = useState<boolean>(true);
-  const [brandingTargetType, setBrandingTargetType] = useState<'both' | 'avatar' | 'cover'>('both');
 
   /** Trạng thái Hàng Đợi & Tiến Trình */
   const [queueStatus, setQueueStatus] = useState<any>(null);
@@ -163,10 +166,12 @@ export default function PageBrandingMuse() {
       /** Lọc theo Trạng thái Nhận diện */
       const hasAvatar = !!p.brandingAvatarUrl;
       const hasCover = !!p.brandingCoverUrl;
+      const hasBio = !!(p.brandingBio || (p as any).branding_bio);
 
       if (filterMode === 'missing_only') return !hasAvatar || !hasCover;
       if (filterMode === 'missing_cover') return !hasCover;
       if (filterMode === 'missing_avatar') return !hasAvatar;
+      if (filterMode === 'missing_bio') return !hasBio;
       if (filterMode === 'has_branding') return hasAvatar && hasCover;
 
       return true;
@@ -214,10 +219,13 @@ export default function PageBrandingMuse() {
       return;
     }
 
+    const targetType: 'both' | 'avatar' | 'cover' = enableAvatar && enableCover ? 'both' : enableAvatar ? 'avatar' : 'cover';
+
     const confirm = await ztteam_showConfirm(
       'Xác nhận Đưa vào Hàng Đợi Muse',
       `Bạn chuẩn bị đưa ${targetPages.length} Fanpage vào hàng đợi tạo nhận diện bằng Muse.ai.\n\n` +
-      `- Định dạng: ${brandingTargetType === 'both' ? 'Cả Avatar (1:1) và Ảnh bìa (16:9)' : brandingTargetType === 'avatar' ? 'Chỉ Avatar (1:1)' : 'Chỉ Ảnh bìa (16:9)'}\n` +
+      `- Định dạng ảnh: ${targetType === 'both' ? 'Cả Avatar (1:1) và Ảnh bìa (16:9)' : targetType === 'avatar' ? 'Chỉ Avatar (1:1)' : 'Chỉ Ảnh bìa (16:9)'}\n` +
+      `- Kèm Tiểu sử & Mô tả: ${enableBioDesc ? 'BẬT (100% English)' : 'TẮT'}\n` +
       `- Tự động cập nhật Facebook: ${autoApplyFacebook ? 'BẬT' : 'TẮT (Chỉ lưu trữ)'}\n\n` +
       `Tiến trình sẽ được xử lý tự động khi Worker Muse trên máy tính hoạt động. Bạn có muốn tiếp tục?`
     );
@@ -229,14 +237,14 @@ export default function PageBrandingMuse() {
       const res = await api.post('/facebook/pages/branding/bulk-queue', {
         scope: 'selected',
         pageIds: targetPages.map(p => p.id),
-        customAvatarPrompt,
-        customCoverPrompt,
-        customBioTemplate,
-        customDescTemplate,
-        autoApplyBioDesc,
+        customAvatarPrompt: enableAvatar ? customAvatarPrompt : undefined,
+        customCoverPrompt: enableCover ? customCoverPrompt : undefined,
+        customBioTemplate: enableBioDesc ? customBioTemplate : undefined,
+        customDescTemplate: enableBioDesc ? customDescTemplate : undefined,
+        autoApplyBioDesc: enableBioDesc,
         theme: selectedThemeId,
         autoApplyFacebook,
-        brandingType: brandingTargetType,
+        brandingType: targetType,
       });
 
       if (res.data?.success) {
@@ -253,7 +261,7 @@ export default function PageBrandingMuse() {
     }
   };
 
-  /** Cập nhật riêng Mô tả & Tiểu sử cho các Fanpage đã chọn qua Meta Graph API */
+  /** Cập nhật riêng Mô tả & Tiểu sử cho các Fanpage đã chọn qua Meta Graph API (100% English, Không cần vẽ ảnh) */
   const handleBulkApplyDescriptionsOnly = async () => {
     const targetPages = selectedPageIds.length > 0 
       ? pages.filter(p => selectedPageIds.includes(p.id))
@@ -270,10 +278,11 @@ export default function PageBrandingMuse() {
     }
 
     const confirm = await ztteam_showConfirm(
-      'Cập Nhật Mô Tả & Tiểu Sử Lên Facebook',
+      'Cập Nhật Mô Tả & Tiểu Sử (100% English) Lên Facebook',
       `Bạn chuẩn bị gửi lệnh cập nhật Mô tả & Tiểu sử trực tiếp qua Meta Graph API cho ${targetPages.length} Fanpage.\n\n` +
       `- Chủ đề: ${THEME_PRESETS.find(t => t.id === selectedThemeId)?.name || selectedThemeId}\n` +
-      `- Giữ nguyên toàn bộ Avatar và Ảnh bìa hiện tại.\n\n` +
+      `- Giữ nguyên toàn bộ Avatar và Ảnh bìa hiện tại (Không cần tạo ảnh).\n` +
+      `- Ngôn ngữ: 100% English chuẩn quốc tế.\n\n` +
       `Bạn có muốn tiếp tục áp dụng ngay?`
     );
 
@@ -299,11 +308,20 @@ export default function PageBrandingMuse() {
     }
   };
 
-  /** Áp dụng Ảnh lên Facebook thủ công */
+  /** Áp dụng Ảnh & Bio lên Facebook thủ công */
   const handleApplySinglePageFacebook = async (page: any) => {
+    const hasImage = !!(page.brandingAvatarUrl || page.brandingCoverUrl);
+    const hasBio = !!(page.brandingBio || (page as any).branding_bio);
+
+    const descMsg = hasImage && hasBio
+      ? `Hệ thống sẽ cập nhật Avatar, Ảnh bìa và Tiểu sử/Mô tả lên Fanpage "${page.name}".`
+      : hasImage
+      ? `Hệ thống sẽ cập nhật Avatar và Ảnh bìa lên Fanpage "${page.name}".`
+      : `Hệ thống sẽ cập nhật Tiểu sử & Mô tả lên Fanpage "${page.name}".`;
+
     const confirm = await ztteam_showConfirm(
       'Áp Dụng Lên Facebook',
-      `Hệ thống sẽ cập nhật Avatar và Ảnh bìa đã tạo lên Fanpage "${page.name}". Quá trình này dùng cờ ẩn để không spam bảng tin. Bạn có muốn áp dụng?`
+      `${descMsg} Quá trình này dùng cờ ẩn để không spam bảng tin. Bạn có muốn áp dụng?`
     );
     if (!confirm) return;
 
@@ -312,9 +330,11 @@ export default function PageBrandingMuse() {
       const res = await api.post(`/facebook/pages/${page.id}/branding/apply`, {
         avatarUrl: page.brandingAvatarUrl || undefined,
         coverUrl: page.brandingCoverUrl || undefined,
+        bio: page.brandingBio || (page as any).branding_bio || undefined,
+        description: page.brandingDescription || (page as any).branding_description || undefined,
       });
       if (res.data?.success) {
-        ztteam_showToast(res.data.message || `Đã cập nhật Avatar & Ảnh bìa cho Fanpage "${page.name}" thành công!`, 'success');
+        ztteam_showToast(res.data.message || `Đã cập nhật nhận diện cho Fanpage "${page.name}" thành công!`, 'success');
         await refreshData();
       }
     } catch (err: any) {
@@ -368,8 +388,10 @@ export default function PageBrandingMuse() {
     const total = pages.filter(p => p.isActive !== false).length;
     const hasAvatar = pages.filter(p => p.isActive !== false && p.brandingAvatarUrl).length;
     const hasCover = pages.filter(p => p.isActive !== false && p.brandingCoverUrl).length;
+    const hasBio = pages.filter(p => p.isActive !== false && (p.brandingBio || (p as any).branding_bio)).length;
+    const missingBio = pages.filter(p => p.isActive !== false && !(p.brandingBio || (p as any).branding_bio)).length;
     const missingAny = pages.filter(p => p.isActive !== false && (!p.brandingAvatarUrl || !p.brandingCoverUrl)).length;
-    return { total, hasAvatar, hasCover, missingAny };
+    return { total, hasAvatar, hasCover, hasBio, missingBio, missingAny };
   }, [pages]);
 
   return (
@@ -595,7 +617,7 @@ export default function PageBrandingMuse() {
                 onClick={() => setFilterMode('missing_cover')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   filterMode === 'missing_cover'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-xs'
+                    ? 'bg-teal-500/20 border-teal-500 text-teal-300 shadow-xs'
                     : 'bg-fb-surface-hover/20 border-slate-700/60 text-slate-400 hover:border-slate-500'
                 }`}
               >
@@ -617,6 +639,22 @@ export default function PageBrandingMuse() {
                 <span>Chỉ thiếu Avatar</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
                   {stats.total - stats.hasAvatar}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterMode('missing_bio')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterMode === 'missing_bio'
+                    ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-xs'
+                    : 'bg-fb-surface-hover/20 border-slate-700/60 text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">badge</span>
+                <span>Chưa có Bio / Mô tả</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-cyan-300 font-mono">
+                  {stats.missingBio}
                 </span>
               </button>
 
@@ -662,6 +700,7 @@ export default function PageBrandingMuse() {
                   const isSelected = selectedPageIds.includes(page.id);
                   const hasAvatar = !!page.brandingAvatarUrl;
                   const hasCover = !!page.brandingCoverUrl;
+                  const pageBio = page.brandingBio || (page as any).branding_bio;
 
                   return (
                     <div
@@ -740,6 +779,21 @@ export default function PageBrandingMuse() {
                           </span>
                         )}
 
+                        {/** Trạng thái Bio */}
+                        {pageBio ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 max-w-[110px] truncate"
+                            title={`Bio: "${pageBio}"`}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">badge</span>
+                            Bio OK
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700/60">
+                            Thiếu Bio
+                          </span>
+                        )}
+
                         {/** Nút Chuyển nhanh qua tab cấu hình */}
                         <button
                           type="button"
@@ -761,18 +815,34 @@ export default function PageBrandingMuse() {
             </div>
 
             {/** Footer Bảng */}
-            <div className="p-3 bg-slate-900/40 border-t border-fb-surface-hover/50 flex items-center justify-between">
+            <div className="p-3 bg-slate-900/40 border-t border-fb-surface-hover/50 flex flex-wrap items-center justify-between gap-3">
               <div className="text-xs text-slate-400">
                 Hiển thị <b className="text-white">{filteredPages.length}</b> Fanpage
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab(2)}
-                className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-              >
-                <span>Tiếp tục sang bước 2: Tùy chỉnh Prompt</span>
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnableAvatar(false);
+                    setEnableCover(false);
+                    setEnableBioDesc(true);
+                    setActiveTab(2);
+                  }}
+                  className="px-3.5 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Chuyển sang cấu hình và cập nhật riêng Tiểu sử & Mô tả (100% English, không tạo ảnh)"
+                >
+                  <span className="material-symbols-outlined text-sm">badge</span>
+                  <span>Chỉ Cập Nhật Bio & Mô Tả</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(2)}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                >
+                  <span>Tiếp tục sang bước 2: Tùy chỉnh Nhận diện</span>
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -783,6 +853,107 @@ export default function PageBrandingMuse() {
        * ========================================================================= */}
       {activeTab === 2 && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/** Khung Chọn Tác Vụ Độc Lập: Avatar, Cover, Bio & Mô Tả */}
+          <div className="bg-fb-surface rounded-2xl shadow-lg border border-fb-surface-hover/50 p-4 sm:p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-fb-surface-hover/40">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-400 text-lg">checklist</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Chọn Tác Vụ Cần Thực Hiện (Có Thể Chọn Riêng Biệt)
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Tích chọn các hạng mục bạn muốn thực hiện — có thể chọn riêng Bio/Mô tả mà không bắt buộc tạo Avatar
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              {/** Card 1: Avatar */}
+              <div
+                onClick={() => setEnableAvatar(!enableAvatar)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                  enableAvatar
+                    ? 'bg-emerald-500/15 border-emerald-500 shadow-sm'
+                    : 'bg-slate-900/40 border-slate-700/50 opacity-60 hover:opacity-90'
+                }`}
+              >
+                <div className="pt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={enableAvatar}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                    <span className="material-symbols-outlined text-sm text-emerald-400">account_circle</span>
+                    <span>Tạo Avatar (1:1)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 leading-snug">
+                    Vẽ ảnh đại diện vuông 1024x1024 qua Muse.ai
+                  </div>
+                </div>
+              </div>
+
+              {/** Card 2: Cover */}
+              <div
+                onClick={() => setEnableCover(!enableCover)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                  enableCover
+                    ? 'bg-teal-500/15 border-teal-500 shadow-sm'
+                    : 'bg-slate-900/40 border-slate-700/50 opacity-60 hover:opacity-90'
+                }`}
+              >
+                <div className="pt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={enableCover}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-teal-500 focus:ring-teal-500 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                    <span className="material-symbols-outlined text-sm text-teal-400">panorama</span>
+                    <span>Tạo Ảnh Bìa (16:9)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 leading-snug">
+                    Vẽ banner phong cảnh điện ảnh 16:9 qua Muse.ai
+                  </div>
+                </div>
+              </div>
+
+              {/** Card 3: Bio & Description */}
+              <div
+                onClick={() => setEnableBioDesc(!enableBioDesc)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                  enableBioDesc
+                    ? 'bg-cyan-500/15 border-cyan-500 shadow-sm ring-1 ring-cyan-500/30'
+                    : 'bg-slate-900/40 border-slate-700/50 opacity-60 hover:opacity-90'
+                }`}
+              >
+                <div className="pt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={enableBioDesc}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-cyan-300">
+                    <span className="material-symbols-outlined text-sm text-cyan-400">badge</span>
+                    <span>Tiểu Sử & Mô Tả (100% English)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 leading-snug">
+                    Cập nhật Bio & About qua Meta Graph API (không cần vẽ ảnh)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/** Cột Trái: Chọn Preset & Tùy chỉnh Prompt */}
             <div className="lg:col-span-8 space-y-5">
@@ -820,124 +991,201 @@ export default function PageBrandingMuse() {
               </div>
 
               {/** Khối 2: Prompt Avatar 1:1 */}
-              <div className="bg-fb-surface rounded-2xl shadow-lg border border-fb-surface-hover/50 p-5 space-y-3">
+              <div className={`bg-fb-surface rounded-2xl shadow-lg border p-5 space-y-3 transition-all ${
+                enableAvatar ? 'border-fb-surface-hover/50' : 'border-slate-800 opacity-60 bg-slate-900/20'
+              }`}>
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">account_circle</span>
                     <span>2. Prompt Ảnh Đại Diện (Avatar 1:1)</span>
                   </label>
-                  <span className="text-[11px] font-mono text-slate-400">Vuông 1024x1024</span>
+                  <div className="flex items-center gap-2">
+                    {!enableAvatar && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                        ĐÃ TẮT (Không tạo Avatar)
+                      </span>
+                    )}
+                    <span className="text-[11px] font-mono text-slate-400">Vuông 1024x1024</span>
+                  </div>
                 </div>
-                <textarea
-                  rows={4}
-                  value={customAvatarPrompt}
-                  onChange={e => setCustomAvatarPrompt(e.target.value)}
-                  placeholder="Nhập câu lệnh prompt tiếng Anh cho Avatar..."
-                  className="w-full p-3.5 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono leading-relaxed"
-                />
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                  <span>Biến mẫu:</span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono">
-                    {'{PAGE_NAME}'}
-                  </span>
-                  <span>= Tên Fanpage;</span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
-                    {'{THEME}'}
-                  </span>
-                  <span>= Chủ đề</span>
-                </div>
+                {enableAvatar ? (
+                  <>
+                    <textarea
+                      rows={4}
+                      value={customAvatarPrompt}
+                      onChange={e => setCustomAvatarPrompt(e.target.value)}
+                      placeholder="Enter 1:1 square prompt in English for Avatar..."
+                      className="w-full p-3.5 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono leading-relaxed"
+                    />
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                      <span>Biến mẫu:</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono">
+                        {'{PAGE_NAME}'}
+                      </span>
+                      <span>= Tên Fanpage;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
+                        {'{THEME}'}
+                      </span>
+                      <span>= Chủ đề</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>Đang tắt tạo Avatar cho đợt này. Page sẽ giữ nguyên ảnh đại diện hiện tại.</span>
+                    <button
+                      type="button"
+                      onClick={() => setEnableAvatar(true)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 font-bold text-[11px] cursor-pointer"
+                    >
+                      Bật lại
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/** Khối 3: Prompt Cover 16:9 */}
-              <div className="bg-fb-surface rounded-2xl shadow-lg border border-fb-surface-hover/50 p-5 space-y-3">
+              <div className={`bg-fb-surface rounded-2xl shadow-lg border p-5 space-y-3 transition-all ${
+                enableCover ? 'border-fb-surface-hover/50' : 'border-slate-800 opacity-60 bg-slate-900/20'
+              }`}>
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">panorama</span>
                     <span>3. Prompt Ảnh Bìa Fanpage (Cover 16:9)</span>
                   </label>
-                  <span className="text-[11px] font-mono text-slate-400">Cinematic Banner 16:9</span>
+                  <div className="flex items-center gap-2">
+                    {!enableCover && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                        ĐÃ TẮT (Không tạo Cover)
+                      </span>
+                    )}
+                    <span className="text-[11px] font-mono text-slate-400">Cinematic Banner 16:9</span>
+                  </div>
                 </div>
-                <textarea
-                  rows={4}
-                  value={customCoverPrompt}
-                  onChange={e => setCustomCoverPrompt(e.target.value)}
-                  placeholder="Nhập câu lệnh prompt tiếng Anh cho Ảnh bìa..."
-                  className="w-full p-3.5 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 font-mono leading-relaxed"
-                />
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                  <span>Biến mẫu:</span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono">
-                    {'{PAGE_NAME}'}
-                  </span>
-                  <span>= Tên Fanpage;</span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
-                    {'{THEME}'}
-                  </span>
-                  <span>= Chủ đề</span>
-                </div>
+                {enableCover ? (
+                  <>
+                    <textarea
+                      rows={4}
+                      value={customCoverPrompt}
+                      onChange={e => setCustomCoverPrompt(e.target.value)}
+                      placeholder="Enter 16:9 widescreen prompt in English for Cover..."
+                      className="w-full p-3.5 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 font-mono leading-relaxed"
+                    />
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                      <span>Biến mẫu:</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono">
+                        {'{PAGE_NAME}'}
+                      </span>
+                      <span>= Tên Fanpage;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
+                        {'{THEME}'}
+                      </span>
+                      <span>= Chủ đề</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>Đang tắt tạo Ảnh bìa cho đợt này. Page sẽ giữ nguyên ảnh bìa hiện tại.</span>
+                    <button
+                      type="button"
+                      onClick={() => setEnableCover(true)}
+                      className="px-2.5 py-1 rounded-lg bg-teal-500/15 text-teal-400 hover:bg-teal-500/25 border border-teal-500/30 font-bold text-[11px] cursor-pointer"
+                    >
+                      Bật lại
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/** Khối 4: Tiểu Sử & Mô Tả Fanpage (Bio / Description) */}
-              <div className="bg-fb-surface rounded-2xl shadow-lg border border-fb-surface-hover/50 p-5 space-y-4">
+              {/** Khối 4: Tiểu Sử & Mô Tả Fanpage (Bio / Description) - 100% ENGLISH */}
+              <div className={`bg-fb-surface rounded-2xl shadow-lg border p-5 space-y-4 transition-all ${
+                enableBioDesc
+                  ? 'border-cyan-500/50 shadow-cyan-500/5 ring-1 ring-cyan-500/20'
+                  : 'border-slate-800 opacity-60 bg-slate-900/20'
+              }`}>
                 <div className="flex items-center justify-between pb-2 border-b border-fb-surface-hover/40">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-base text-cyan-400">badge</span>
                     <label className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
-                      4. Tiểu Sử & Mô Tả Fanpage Theo Chủ Đề (Bio / About)
+                      4. Tiểu Sử & Mô Tả Fanpage (100% English)
                     </label>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
-                    META GRAPH API
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
+                      100% ENGLISH
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                      META GRAPH API
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {/** Ô nhập Bio ngắn */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-white flex items-center gap-1">
-                        <span>Tiểu sử ngắn (Bio Mobile):</span>
-                      </label>
-                      <span className="text-[10px] text-slate-400">Hiển thị dưới Tên Page (khuyến nghị dưới 100 ký tự)</span>
+                {enableBioDesc ? (
+                  <div className="space-y-3">
+                    {/** Ô nhập Bio ngắn */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-white flex items-center gap-1">
+                          <span>Tiểu sử ngắn (Bio Mobile - 100% English):</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Tối đa 101 ký tự • Dưới tên Page</span>
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={101}
+                        value={customBioTemplate}
+                        onChange={e => setCustomBioTemplate(e.target.value)}
+                        placeholder="{PAGE_NAME} — Heartfelt human stories & inspiring life journeys."
+                        className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500">
+                        <span>Biến: {'{PAGE_NAME}'} sẽ được thay bằng tên Page khi gửi lên Facebook</span>
+                        <span className={customBioTemplate.length > 101 ? 'text-amber-400 font-bold' : 'text-slate-400'}>
+                          {customBioTemplate.length}/101 ký tự
+                        </span>
+                      </div>
                     </div>
-                    <input
-                      type="text"
-                      value={customBioTemplate}
-                      onChange={e => setCustomBioTemplate(e.target.value)}
-                      placeholder="{PAGE_NAME} — Lắng nghe những câu chuyện đời thường..."
-                      className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
 
-                  {/** Ô nhập Mô tả chi tiết */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-white flex items-center gap-1">
-                        <span>Mô tả chi tiết (About / Description):</span>
-                      </label>
-                      <span className="text-[10px] text-slate-400">Giới thiệu sứ mệnh & nội dung của Fanpage</span>
+                    {/** Ô nhập Mô tả chi tiết */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-white flex items-center gap-1">
+                          <span>Mô tả chi tiết (About / Description - 100% English):</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Giới thiệu sứ mệnh & nội dung Page</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={customDescTemplate}
+                        onChange={e => setCustomDescTemplate(e.target.value)}
+                        placeholder="Welcome to {PAGE_NAME}. Discover emotional life stories, heartwarming human experiences..."
+                        className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 leading-relaxed font-normal"
+                      />
                     </div>
-                    <textarea
-                      rows={3}
-                      value={customDescTemplate}
-                      onChange={e => setCustomDescTemplate(e.target.value)}
-                      placeholder="Chào mừng bạn đến với {PAGE_NAME}. Nơi chia sẻ những câu chuyện nhân văn..."
-                      className="w-full p-3 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 leading-relaxed"
-                    />
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 pt-1">
-                    <span>Biến tự động điền:</span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono">
-                      {'{PAGE_NAME}'}
-                    </span>
-                    <span>= Tên Page;</span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
-                      {'{THEME}'}
-                    </span>
-                    <span>= Chủ đề</span>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 pt-1">
+                      <span>Biến tự động điền:</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono">
+                        {'{PAGE_NAME}'}
+                      </span>
+                      <span>= Tên Page;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-teal-400 font-mono">
+                        {'{THEME}'}
+                      </span>
+                      <span>= Chủ đề</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>Đang tắt cập nhật Bio & Mô tả cho đợt này. Page sẽ giữ nguyên thông tin hiện có.</span>
+                    <button
+                      type="button"
+                      onClick={() => setEnableBioDesc(true)}
+                      className="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 border border-cyan-500/30 font-bold text-[11px] cursor-pointer"
+                    >
+                      Bật lại
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -949,53 +1197,74 @@ export default function PageBrandingMuse() {
                   <span>Tùy Chọn Thực Thi</span>
                 </h3>
 
-                {/** Loại hình ảnh muốn tạo */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-fb-text">Loại ảnh cần Muse tạo:</label>
-                  <CustomDropdown
-                    value={brandingTargetType}
-                    onChange={val => setBrandingTargetType(val as any)}
-                    options={[
-                      { value: 'both', label: 'Cả Avatar (1:1) & Ảnh Bìa (16:9)' },
-                      { value: 'avatar', label: 'Chỉ tạo Avatar (1:1)' },
-                      { value: 'cover', label: 'Chỉ tạo Ảnh Bìa (16:9)' },
-                    ]}
-                  />
+                {/** Tóm tắt các tác vụ đang chọn */}
+                <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-300">Tác vụ đang chọn:</div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">1. Avatar 1:1:</span>
+                      {enableAvatar ? (
+                        <span className="text-emerald-400 font-bold">BẬT (Muse.ai)</span>
+                      ) : (
+                        <span className="text-slate-500">TẮT</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">2. Ảnh bìa 16:9:</span>
+                      {enableCover ? (
+                        <span className="text-teal-400 font-bold">BẬT (Muse.ai)</span>
+                      ) : (
+                        <span className="text-slate-500">TẮT</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">3. Bio & Mô tả:</span>
+                      {enableBioDesc ? (
+                        <span className="text-cyan-400 font-bold">BẬT (Meta API)</span>
+                      ) : (
+                        <span className="text-slate-500">TẮT</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/** Switch 1: Tự động cập nhật lên Facebook */}
-                <div className="pt-2 flex items-center justify-between">
-                  <div className="space-y-0.5 pr-2">
-                    <div className="text-xs font-bold text-white">Tự động gắn lên Facebook</div>
-                    <div className="text-[10px] text-slate-400">Gắn ảnh ngay sau khi Muse render xong qua Meta API (cờ ẩn).</div>
+                {/** Switch 1: Tự động cập nhật ảnh lên Facebook khi vẽ xong */}
+                {(enableAvatar || enableCover) && (
+                  <div className="pt-1 flex items-center justify-between">
+                    <div className="space-y-0.5 pr-2">
+                      <div className="text-xs font-bold text-white">Tự động gắn lên Facebook</div>
+                      <div className="text-[10px] text-slate-400">Gắn ảnh ngay sau khi Muse render xong qua Meta API (cờ ẩn).</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAutoApplyFacebook(!autoApplyFacebook)}
+                      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors shrink-0 cursor-pointer ${
+                        autoApplyFacebook ? 'bg-emerald-500' : 'bg-black/30 shadow-inner border border-white/5'
+                      }`}
+                    >
+                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${autoApplyFacebook ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoApplyFacebook(!autoApplyFacebook)}
-                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors shrink-0 cursor-pointer ${
-                      autoApplyFacebook ? 'bg-emerald-500' : 'bg-black/30 shadow-inner border border-white/5'
-                    }`}
-                  >
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${autoApplyFacebook ? 'translate-x-5' : 'translate-x-1'}`} />
-                  </button>
-                </div>
+                )}
 
                 {/** Switch 2: Chèn tên Fanpage vào Artwork */}
-                <div className="pt-2 flex items-center justify-between">
-                  <div className="space-y-0.5 pr-2">
-                    <div className="text-xs font-bold text-white">Chèn Tên Page Typography</div>
-                    <div className="text-[10px] text-slate-400">Yêu cầu Muse vẽ tên Fanpage dạng chữ nổi bật vào ảnh.</div>
+                {(enableAvatar || enableCover) && (
+                  <div className="pt-1 flex items-center justify-between">
+                    <div className="space-y-0.5 pr-2">
+                      <div className="text-xs font-bold text-white">Chèn Tên Typography</div>
+                      <div className="text-[10px] text-slate-400">Yêu cầu Muse vẽ tên Fanpage dạng chữ nổi bật vào ảnh.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIncludePageNameText(!includePageNameText)}
+                      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors shrink-0 cursor-pointer ${
+                        includePageNameText ? 'bg-emerald-500' : 'bg-black/30 shadow-inner border border-white/5'
+                      }`}
+                    >
+                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${includePageNameText ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIncludePageNameText(!includePageNameText)}
-                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors shrink-0 cursor-pointer ${
-                      includePageNameText ? 'bg-emerald-500' : 'bg-black/30 shadow-inner border border-white/5'
-                    }`}
-                  >
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${includePageNameText ? 'translate-x-5' : 'translate-x-1'}`} />
-                  </button>
-                </div>
+                )}
 
                 {/** Tóm tắt phạm vi */}
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1.5 text-xs text-emerald-300">
@@ -1010,29 +1279,55 @@ export default function PageBrandingMuse() {
                   </div>
                 </div>
 
-                {/** Nút Bắt Đầu Gửi Hàng Đợi */}
-                <button
-                  type="button"
-                  onClick={handleQueueBrandingSubmit}
-                  disabled={isSubmittingQueue || (selectedPageIds.length === 0 && filteredPages.length === 0)}
-                  className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmittingQueue ? (
-                    <span className="material-symbols-outlined animate-spin text-sm">sync</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                  )}
-                  <span>
-                    {isSubmittingQueue
-                      ? 'Đang gửi vào hàng đợi...'
-                      : `Đưa ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page Vào Hàng Đợi Muse`}
-                  </span>
-                </button>
+                {/** Nút Bắt Đầu Thực Thi Chính */}
+                {(!enableAvatar && !enableCover && !enableBioDesc) ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs text-center font-bold">
+                    Vui lòng chọn ít nhất 1 tác vụ (Avatar, Ảnh Bìa hoặc Tiểu sử & Mô tả)
+                  </div>
+                ) : (!enableAvatar && !enableCover && enableBioDesc) ? (
+                  /** Chỉ cập nhật Bio & Mô tả: Nút chạy trực tiếp qua Meta API không cần qua hàng đợi Muse */
+                  <button
+                    type="button"
+                    onClick={handleBulkApplyDescriptionsOnly}
+                    disabled={isSubmittingBioOnly || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    className="w-full py-3 bg-gradient-to-r from-cyan-600 via-fb-blue to-blue-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingBioOnly ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-sm">send</span>
+                    )}
+                    <span>
+                      {isSubmittingBioOnly
+                        ? 'Đang cập nhật lên Facebook...'
+                        : `⚡ Cập Nhật Tiểu Sử & Mô Tả Cho ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page (Meta API)`}
+                    </span>
+                  </button>
+                ) : (
+                  /** Có tạo Avatar hoặc Cover: Nút đưa vào hàng đợi Muse */
+                  <button
+                    type="button"
+                    onClick={handleQueueBrandingSubmit}
+                    disabled={isSubmittingQueue || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingQueue ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                    )}
+                    <span>
+                      {isSubmittingQueue
+                        ? 'Đang gửi vào hàng đợi...'
+                        : `Đưa ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page Vào Hàng Đợi Muse ${enableBioDesc ? '(& Cập nhật Bio)' : ''}`}
+                    </span>
+                  </button>
+                )}
 
-                {/** Nút Cập nhật riêng Mô tả & Tiểu sử trực tiếp qua Meta API */}
+                {/** Nút Cập nhật riêng Mô tả & Tiểu sử trực tiếp qua Meta API (luôn có sẵn) */}
                 <div className="pt-2 border-t border-fb-surface-hover/40 space-y-2">
                   <div className="text-[11px] text-slate-400">
-                    Cập nhật nhanh Tiểu sử & Mô tả cho các Page đã có sẵn Avatar/Cover:
+                    Cập nhật nhanh Tiểu sử & Mô tả (100% English) qua Meta Graph API:
                   </div>
                   <button
                     type="button"
@@ -1043,12 +1338,12 @@ export default function PageBrandingMuse() {
                     {isSubmittingBioOnly ? (
                       <span className="material-symbols-outlined animate-spin text-sm">sync</span>
                     ) : (
-                      <span className="material-symbols-outlined text-sm">send</span>
+                      <span className="material-symbols-outlined text-sm">badge</span>
                     )}
                     <span>
                       {isSubmittingBioOnly
                         ? 'Đang cập nhật lên Facebook...'
-                        : `Cập Nhật Riêng Mô Tả & Bio (${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page)`}
+                        : `⚡ Cập Nhật Riêng Mô Tả & Bio (${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page)`}
                     </span>
                   </button>
                 </div>
@@ -1333,7 +1628,7 @@ export default function PageBrandingMuse() {
                         )}
                       </div>
 
-                      {(hasAvatar || hasCover) ? (
+                      {(hasAvatar || hasCover || !!(page.brandingBio || (page as any).branding_bio)) ? (
                         <button
                           type="button"
                           onClick={() => handleApplySinglePageFacebook(page)}
@@ -1354,7 +1649,7 @@ export default function PageBrandingMuse() {
                           }}
                           className="px-3 py-1.5 bg-fb-surface-hover hover:bg-fb-surface-hover/80 text-fb-text text-xs font-bold rounded-xl transition-colors cursor-pointer"
                         >
-                          Tạo ảnh cho Page này
+                          Cấu hình Page này
                         </button>
                       )}
                     </div>

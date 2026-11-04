@@ -285,6 +285,8 @@ export class ZTTeamFacebookController {
       coverUrl?: string;
       avatarLocalPath?: string;
       coverLocalPath?: string;
+      bio?: string;
+      description?: string;
     }
   ) {
     return this.facebookService.ztteam_applyPageBranding(pageId, body);

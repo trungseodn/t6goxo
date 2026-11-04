@@ -3080,14 +3080,15 @@ export class ZTTeamFacebookService {
       }
     }
 
-    if (!updatedAvatar && !updatedCover) {
-      throw new BadRequestException('Không tìm thấy file ảnh đại diện hoặc ảnh bìa hợp lệ để tải lên Facebook. Vui lòng bấm Tạo Bộ Nhận Diện trước.');
+    const pageBio = data.bio || (page as any).branding_bio;
+    const pageDesc = data.description || (page as any).branding_description;
+
+    if (!updatedAvatar && !updatedCover && !pageBio && !pageDesc) {
+      throw new BadRequestException('Không tìm thấy file ảnh đại diện, ảnh bìa hoặc tiểu sử/mô tả hợp lệ để áp dụng lên Facebook.');
     }
 
     /** 2c. Gắn Mô tả & Tiểu sử (Bio/About) nếu có */
     let updatedInfo = false;
-    const pageBio = data.bio || (page as any).branding_bio;
-    const pageDesc = data.description || (page as any).branding_description;
     if (pageBio || pageDesc) {
       try {
         this.logger.log(`Đang cập nhật Tiểu sử & Mô tả Facebook cho Page ${page.name}...`);
@@ -3139,6 +3140,12 @@ export class ZTTeamFacebookService {
         updateData.branding_cover_url = data.coverUrl;
       }
     }
+    if (pageBio) {
+      updateData.branding_bio = pageBio;
+    }
+    if (pageDesc) {
+      updateData.branding_description = pageDesc;
+    }
     if (Object.keys(updateData).length > 0) {
       await this.prisma.ztteam_pages.update({
         where: { id: page.id },
@@ -3146,10 +3153,16 @@ export class ZTTeamFacebookService {
       });
     }
 
+    const appliedItems = [
+      updatedAvatar ? 'Avatar' : null,
+      updatedCover ? 'Ảnh bìa' : null,
+      updatedInfo ? 'Tiểu sử & Mô tả' : null
+    ].filter(Boolean);
+
     return {
       success: true,
-      message: `Đã áp dụng thành công ${[updatedAvatar ? 'Avatar' : null, updatedCover ? 'Ảnh bìa' : null].filter(Boolean).join(' và ')} lên Fanpage "${page.name}"!`,
-      newAvatarUrl: `https://graph.facebook.com/${page.fb_page_id}/picture?type=large&_t=${Date.now()}`,
+      message: `Đã áp dụng thành công ${appliedItems.length > 0 ? appliedItems.join(' và ') : 'nhận diện'} lên Fanpage "${page.name}"!`,
+      newAvatarUrl: updatedAvatar ? `https://graph.facebook.com/${page.fb_page_id}/picture?type=large&_t=${Date.now()}` : undefined,
       newCoverUrl: data.coverUrl || null
     };
   }
