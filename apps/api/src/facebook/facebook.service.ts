@@ -3675,6 +3675,7 @@ export class ZTTeamFacebookService {
     });
 
     const filteredPages = candidatePages.filter(p => {
+      if (scope === 'selected') return true;
       const hasAvatar = !!(p as any).branding_avatar_url;
       const hasCover = !!(p as any).branding_cover_url;
       if (filterMode === 'missing_only') return !hasAvatar || !hasCover;
@@ -3902,6 +3903,8 @@ export class ZTTeamFacebookService {
           avatarLocalPath,
           coverUrl: updateData.branding_cover_url,
           coverLocalPath,
+          bio: (page as any).branding_bio,
+          description: (page as any).branding_description,
         });
         appliedFacebook = true;
         applyMessage = applyRes?.message || 'Đã áp dụng thành công lên Facebook!';
@@ -4054,10 +4057,25 @@ export class ZTTeamFacebookService {
 
     const pages = await this.prisma.ztteam_pages.findMany({
       where: {
-        id: { in: pageIds },
+        OR: [
+          { id: { in: pageIds } },
+          { fb_page_id: { in: pageIds } }
+        ],
         is_active: true
       }
     });
+
+    this.logger.log(`[bulkApplyDescriptions] Bắt đầu cập nhật Bio & Mô tả cho ${pageIds.length} Page ID (khớp ${pages.length} Page trong DB). Theme: ${theme}`);
+
+    if (pages.length === 0) {
+      return {
+        success: false,
+        total: 0,
+        successCount: 0,
+        failCount: 0,
+        message: 'Không tìm thấy Fanpage nào phù hợp trong hệ thống để cập nhật.'
+      };
+    }
 
     let successCount = 0;
     let failCount = 0;

@@ -208,11 +208,33 @@ export default function PageBrandingMuse() {
     );
   };
 
+  /** Danh sách Page thực tế được nhắm mục tiêu cho tác vụ */
+  const targetPagesForExecution = useMemo(() => {
+    // 1. Nếu người dùng đã tích chọn cụ thể ở Tab 1
+    if (selectedPageIds.length > 0) {
+      const selected = pages.filter(p => p.isActive !== false && (selectedPageIds.includes(p.id) || (p.fb_page_id && selectedPageIds.includes(p.fb_page_id)) || (p.internalId && selectedPageIds.includes(p.internalId))));
+      if (selected.length > 0) return selected;
+    }
+    // 2. Nếu người dùng chỉ cập nhật Tiểu Sử & Mô Tả (không tạo ảnh):
+    // Cho phép áp dụng cho TẤT CẢ các Page theo bộ lọc BM / Tìm kiếm (không bị lọc mất bởi thiếu avatar/cover)
+    if (!enableAvatar && !enableCover && enableBioDesc) {
+      return pages.filter(p => {
+        if (p.isActive === false) return false;
+        if (selectedBm !== 'all' && p.businessName !== selectedBm) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          return (p.name || '').toLowerCase().includes(q) || (p.fb_page_id || p.id || '').includes(q);
+        }
+        return true;
+      });
+    }
+    // 3. Mặc định dùng filteredPages
+    return filteredPages;
+  }, [pages, selectedPageIds, filteredPages, enableAvatar, enableCover, enableBioDesc, selectedBm, searchQuery]);
+
   /** Đưa Fanpage đã chọn vào Hàng Đợi Muse */
   const handleQueueBrandingSubmit = async () => {
-    const targetPages = selectedPageIds.length > 0 
-      ? pages.filter(p => selectedPageIds.includes(p.id))
-      : filteredPages;
+    const targetPages = targetPagesForExecution;
 
     if (targetPages.length === 0) {
       ztteam_showToast('Vui lòng chọn ít nhất 1 Fanpage để đưa vào hàng đợi', 'error');
@@ -236,7 +258,7 @@ export default function PageBrandingMuse() {
       setIsSubmittingQueue(true);
       const res = await api.post('/facebook/pages/branding/bulk-queue', {
         scope: 'selected',
-        pageIds: targetPages.map(p => p.id),
+        pageIds: targetPages.map(p => p.fb_page_id || p.id),
         customAvatarPrompt: enableAvatar ? customAvatarPrompt : undefined,
         customCoverPrompt: enableCover ? customCoverPrompt : undefined,
         customBioTemplate: enableBioDesc ? customBioTemplate : undefined,
@@ -263,9 +285,7 @@ export default function PageBrandingMuse() {
 
   /** Cập nhật riêng Mô tả & Tiểu sử cho các Fanpage đã chọn qua Meta Graph API (100% English, Không cần vẽ ảnh) */
   const handleBulkApplyDescriptionsOnly = async () => {
-    const targetPages = selectedPageIds.length > 0 
-      ? pages.filter(p => selectedPageIds.includes(p.id))
-      : filteredPages;
+    const targetPages = targetPagesForExecution;
 
     if (targetPages.length === 0) {
       ztteam_showToast('Vui lòng chọn ít nhất 1 Fanpage để cập nhật mô tả', 'error');
@@ -291,7 +311,7 @@ export default function PageBrandingMuse() {
     try {
       setIsSubmittingBioOnly(true);
       const res = await api.post('/facebook/pages/branding/bulk-apply-descriptions', {
-        pageIds: targetPages.map(p => p.id),
+        pageIds: targetPages.map(p => p.fb_page_id || p.id),
         bioTemplate: customBioTemplate,
         descTemplate: customDescTemplate,
         theme: selectedThemeId,
@@ -300,6 +320,8 @@ export default function PageBrandingMuse() {
       if (res.data?.success) {
         ztteam_showToast(res.data.message || `Đã cập nhật Mô tả cho ${targetPages.length} Fanpage thành công!`, 'success');
         await refreshData();
+      } else {
+        ztteam_showToast(res.data?.message || 'Không thể cập nhật mô tả lên Facebook', 'error');
       }
     } catch (err: any) {
       ztteam_showToast(err.response?.data?.message || err.message || 'Lỗi khi cập nhật mô tả lên Facebook', 'error');
@@ -869,8 +891,7 @@ export default function PageBrandingMuse() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
               {/** Card 1: Avatar */}
-              <div
-                onClick={() => setEnableAvatar(!enableAvatar)}
+              <label
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
                   enableAvatar
                     ? 'bg-emerald-500/15 border-emerald-500 shadow-sm'
@@ -881,7 +902,7 @@ export default function PageBrandingMuse() {
                   <input
                     type="checkbox"
                     checked={enableAvatar}
-                    onChange={() => {}}
+                    onChange={e => setEnableAvatar(e.target.checked)}
                     className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 cursor-pointer"
                   />
                 </div>
@@ -894,11 +915,10 @@ export default function PageBrandingMuse() {
                     Vẽ ảnh đại diện vuông 1024x1024 qua Muse.ai
                   </div>
                 </div>
-              </div>
+              </label>
 
               {/** Card 2: Cover */}
-              <div
-                onClick={() => setEnableCover(!enableCover)}
+              <label
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
                   enableCover
                     ? 'bg-teal-500/15 border-teal-500 shadow-sm'
@@ -909,7 +929,7 @@ export default function PageBrandingMuse() {
                   <input
                     type="checkbox"
                     checked={enableCover}
-                    onChange={() => {}}
+                    onChange={e => setEnableCover(e.target.checked)}
                     className="w-4 h-4 rounded text-teal-500 focus:ring-teal-500 focus:ring-offset-slate-900 cursor-pointer"
                   />
                 </div>
@@ -922,11 +942,10 @@ export default function PageBrandingMuse() {
                     Vẽ banner phong cảnh điện ảnh 16:9 qua Muse.ai
                   </div>
                 </div>
-              </div>
+              </label>
 
               {/** Card 3: Bio & Description */}
-              <div
-                onClick={() => setEnableBioDesc(!enableBioDesc)}
+              <label
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
                   enableBioDesc
                     ? 'bg-cyan-500/15 border-cyan-500 shadow-sm ring-1 ring-cyan-500/30'
@@ -937,7 +956,7 @@ export default function PageBrandingMuse() {
                   <input
                     type="checkbox"
                     checked={enableBioDesc}
-                    onChange={() => {}}
+                    onChange={e => setEnableBioDesc(e.target.checked)}
                     className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900 cursor-pointer"
                   />
                 </div>
@@ -950,7 +969,7 @@ export default function PageBrandingMuse() {
                     Cập nhật Bio & About qua Meta Graph API (không cần vẽ ảnh)
                   </div>
                 </div>
-              </div>
+              </label>
             </div>
           </div>
 
@@ -1173,6 +1192,30 @@ export default function PageBrandingMuse() {
                       </span>
                       <span>= Chủ đề</span>
                     </div>
+
+                    {/** Nút Thao Tác Trực Tiếp Cập Nhật Mô Tả & Bio */}
+                    <div className="pt-3 border-t border-fb-surface-hover/40 flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-[11px] text-slate-400">
+                        Áp dụng cho <b className="text-cyan-300 font-bold">{targetPagesForExecution.length}</b> Fanpage (Meta Graph API)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleBulkApplyDescriptionsOnly}
+                        disabled={isSubmittingBioOnly || targetPagesForExecution.length === 0}
+                        className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-fb-blue to-blue-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingBioOnly ? (
+                          <span className="material-symbols-outlined animate-spin text-sm">sync</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-sm">send</span>
+                        )}
+                        <span>
+                          {isSubmittingBioOnly
+                            ? 'Đang gửi lên Facebook...'
+                            : `⚡ Cập Nhật Tiểu Sử & Mô Tả Ngay (${targetPagesForExecution.length} Page)`}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
@@ -1275,7 +1318,7 @@ export default function PageBrandingMuse() {
                   <div>
                     {selectedPageIds.length > 0
                       ? `Đang chọn ${selectedPageIds.length} Fanpage cụ thể.`
-                      : `Áp dụng cho toàn bộ ${filteredPages.length} Fanpage theo bộ lọc hiện tại.`}
+                      : `Áp dụng cho ${targetPagesForExecution.length} Fanpage theo bộ lọc hiện tại.`}
                   </div>
                 </div>
 
@@ -1289,7 +1332,7 @@ export default function PageBrandingMuse() {
                   <button
                     type="button"
                     onClick={handleBulkApplyDescriptionsOnly}
-                    disabled={isSubmittingBioOnly || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    disabled={isSubmittingBioOnly || targetPagesForExecution.length === 0}
                     className="w-full py-3 bg-gradient-to-r from-cyan-600 via-fb-blue to-blue-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSubmittingBioOnly ? (
@@ -1300,7 +1343,7 @@ export default function PageBrandingMuse() {
                     <span>
                       {isSubmittingBioOnly
                         ? 'Đang cập nhật lên Facebook...'
-                        : `⚡ Cập Nhật Tiểu Sử & Mô Tả Cho ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page (Meta API)`}
+                        : `⚡ Cập Nhật Tiểu Sử & Mô Tả Cho ${targetPagesForExecution.length} Page (Meta API)`}
                     </span>
                   </button>
                 ) : (
@@ -1308,7 +1351,7 @@ export default function PageBrandingMuse() {
                   <button
                     type="button"
                     onClick={handleQueueBrandingSubmit}
-                    disabled={isSubmittingQueue || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    disabled={isSubmittingQueue || targetPagesForExecution.length === 0}
                     className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSubmittingQueue ? (
@@ -1319,7 +1362,7 @@ export default function PageBrandingMuse() {
                     <span>
                       {isSubmittingQueue
                         ? 'Đang gửi vào hàng đợi...'
-                        : `Đưa ${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page Vào Hàng Đợi Muse ${enableBioDesc ? '(& Cập nhật Bio)' : ''}`}
+                        : `Đưa ${targetPagesForExecution.length} Page Vào Hàng Đợi Muse ${enableBioDesc ? '(& Cập nhật Bio)' : ''}`}
                     </span>
                   </button>
                 )}
@@ -1332,7 +1375,7 @@ export default function PageBrandingMuse() {
                   <button
                     type="button"
                     onClick={handleBulkApplyDescriptionsOnly}
-                    disabled={isSubmittingBioOnly || (selectedPageIds.length === 0 && filteredPages.length === 0)}
+                    disabled={isSubmittingBioOnly || targetPagesForExecution.length === 0}
                     className="w-full py-2.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSubmittingBioOnly ? (
@@ -1343,7 +1386,7 @@ export default function PageBrandingMuse() {
                     <span>
                       {isSubmittingBioOnly
                         ? 'Đang cập nhật lên Facebook...'
-                        : `⚡ Cập Nhật Riêng Mô Tả & Bio (${selectedPageIds.length > 0 ? selectedPageIds.length : filteredPages.length} Page)`}
+                        : `⚡ Cập Nhật Riêng Mô Tả & Bio (${targetPagesForExecution.length} Page)`}
                     </span>
                   </button>
                 </div>
