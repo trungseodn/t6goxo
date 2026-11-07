@@ -120,23 +120,36 @@ export class ZTTeamImageController {
     }
 
     let queuedCount = 0;
-    for (const post of failedPosts) {
-      try {
-        const engine = (post.page as any)?.video_engine || 'hook_image';
-        const updated = await this.prisma.ztteam_images.update({
-          where: { id: post.id },
-          data: { video_status: 'PENDING', error_log: null },
-        });
-        this.eventEmitter.emit('image.updated', updated);
+    const postIds = failedPosts.map(p => p.id);
+    
+    // Cập nhật toàn bộ các bài lỗi về PENDING và xóa error_log trong 1 query an toàn
+    const updateResult = await this.prisma.ztteam_images.updateMany({
+      where: { id: { in: postIds } },
+      data: { video_status: 'PENDING', error_log: null },
+    });
+    queuedCount = updateResult.count;
 
-        if (engine === 'hook_image' || engine === 'text_story') {
-          this.hookVideoService.ztteam_renderHookVideo(post.id).catch(err => {
-            this.logger.error(`[Batch Retry Hook/Text Story Error] ${post.id}: ${err.message}`);
-          });
-        }
-        queuedCount++;
-      } catch (err: any) {
-        this.logger.error(`[Retry Failed Video Error] ${post.id}: ${err.message}`);
+    for (const post of failedPosts) {
+      this.eventEmitter.emit('image.updated', { id: post.id, video_status: 'PENDING', error_log: null });
+    }
+
+    // Nếu người dùng bấm retry cho 1 bài lẻ duy nhất, kích hoạt render ngay
+    if (failedPosts.length === 1) {
+      const singlePost = failedPosts[0];
+      const engine = (singlePost.page as any)?.video_engine || 'hook_image';
+      if (engine === 'hook_image' || engine === 'text_story') {
+        this.hookVideoService.ztteam_renderHookVideo(singlePost.id).catch(err => {
+          this.logger.error(`[Single Retry Hook/Text Story Error] ${singlePost.id}: ${err.message}`);
+        });
+      }
+    } else {
+      // Đối với batch số lượng lớn, kích hoạt 1 bài đầu tiên để bắt đầu ngay, các bài còn lại Auto-Render Cron sẽ tự động gắp xử lý tuần tự (không làm sập CPU/RAM)
+      const firstPost = failedPosts[0];
+      const engine = (firstPost.page as any)?.video_engine || 'hook_image';
+      if (engine === 'hook_image' || engine === 'text_story') {
+        this.hookVideoService.ztteam_renderHookVideo(firstPost.id).catch(err => {
+          this.logger.error(`[Batch Starter Hook/Text Story Error] ${firstPost.id}: ${err.message}`);
+        });
       }
     }
 

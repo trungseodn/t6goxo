@@ -876,64 +876,82 @@ export class ZTTeamHookVideoService {
 
         browser = await puppeteer.launch({
           headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        });
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
-        await page.setContent(htmlContent, { waitUntil: 'load' });
-        await page.evaluateHandle('document.fonts.ready');
-
-        // BẢO ĐẢM TỰ ĐỘNG CĂN CHỈNH: 100% NỘI DUNG VÀ CTA NẰM TRỌN TRONG VIỀN TRONG CỦA CARD
-        await page.evaluate(() => {
-          const card = document.querySelector('.glass-card') as HTMLElement;
-          const cta = document.querySelector('.cta-row') as HTMLElement;
-          const hook = document.querySelector('.story-hook') as HTMLElement;
-          const paragraphs = document.querySelectorAll('.story-p') as NodeListOf<HTMLElement>;
-          const body = document.querySelector('.story-body') as HTMLElement;
-
-          if (!card || !paragraphs.length) return;
-
-          let pFontSize = parseFloat(window.getComputedStyle(paragraphs[0]).fontSize) || 47;
-          let hookFontSize = hook ? parseFloat(window.getComputedStyle(hook).fontSize) || 58 : 58;
-          let pGap = body ? parseFloat(window.getComputedStyle(body).gap) || 24 : 24;
-          let lineHeight = 1.38;
-
-          const isOverflowing = () => {
-            if (card.scrollHeight > card.clientHeight + 1) return true;
-            if (cta) {
-              const cardRect = card.getBoundingClientRect();
-              const ctaRect = cta.getBoundingClientRect();
-              if (cardRect.bottom - ctaRect.bottom < 22) return true;
-            }
-            return false;
-          };
-
-          let iteration = 0;
-          while (isOverflowing() && iteration < 30 && pFontSize > 32) {
-            iteration++;
-            pFontSize -= 1;
-            if (hookFontSize > 40) hookFontSize -= 1.2;
-            if (pGap > 12) pGap -= 1;
-            lineHeight = Math.max(1.24, lineHeight - 0.01);
-
-            paragraphs.forEach(p => {
-              p.style.fontSize = `${pFontSize}px`;
-              p.style.lineHeight = `${lineHeight}`;
-            });
-            if (hook) {
-              hook.style.fontSize = `${hookFontSize}px`;
-              hook.style.marginBottom = `${Math.max(12, pGap)}px`;
-            }
-            if (body) {
-              body.style.gap = `${pGap}px`;
-            }
-          }
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process',
+            '--disable-breakpad',
+            '--disable-crash-reporter',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-extensions',
+          ],
         });
 
         const framePngPath = path.join(tempDir, 'text_story_frame.png');
-        await page.screenshot({ path: framePngPath, omitBackground: false, type: 'png' });
-        await browser.close();
-        browser = null;
+        try {
+          const page = await browser.newPage();
+          await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+          await page.setContent(htmlContent, { waitUntil: 'load', timeout: 30000 });
+          await page.evaluateHandle('document.fonts.ready');
+
+          // BẢO ĐẢM TỰ ĐỘNG CĂN CHỈNH: 100% NỘI DUNG VÀ CTA NẰM TRỌN TRONG VIỀN TRONG CỦA CARD
+          await page.evaluate(() => {
+            const card = document.querySelector('.glass-card') as HTMLElement;
+            const cta = document.querySelector('.cta-row') as HTMLElement;
+            const hook = document.querySelector('.story-hook') as HTMLElement;
+            const paragraphs = document.querySelectorAll('.story-p') as NodeListOf<HTMLElement>;
+            const body = document.querySelector('.story-body') as HTMLElement;
+
+            if (!card || !paragraphs.length) return;
+
+            let pFontSize = parseFloat(window.getComputedStyle(paragraphs[0]).fontSize) || 47;
+            let hookFontSize = hook ? parseFloat(window.getComputedStyle(hook).fontSize) || 58 : 58;
+            let pGap = body ? parseFloat(window.getComputedStyle(body).gap) || 24 : 24;
+            let lineHeight = 1.38;
+
+            const isOverflowing = () => {
+              if (card.scrollHeight > card.clientHeight + 1) return true;
+              if (cta) {
+                const cardRect = card.getBoundingClientRect();
+                const ctaRect = cta.getBoundingClientRect();
+                if (cardRect.bottom - ctaRect.bottom < 22) return true;
+              }
+              return false;
+            };
+
+            let iteration = 0;
+            while (isOverflowing() && iteration < 30 && pFontSize > 32) {
+              iteration++;
+              pFontSize -= 1;
+              if (hookFontSize > 40) hookFontSize -= 1.2;
+              if (pGap > 12) pGap -= 1;
+              lineHeight = Math.max(1.24, lineHeight - 0.01);
+
+              paragraphs.forEach(p => {
+                p.style.fontSize = `${pFontSize}px`;
+                p.style.lineHeight = `${lineHeight}`;
+              });
+              if (hook) {
+                hook.style.fontSize = `${hookFontSize}px`;
+                hook.style.marginBottom = `${Math.max(12, pGap)}px`;
+              }
+              if (body) {
+                body.style.gap = `${pGap}px`;
+              }
+            }
+          });
+
+          await page.screenshot({ path: framePngPath, omitBackground: false, type: 'png' });
+        } finally {
+          if (browser) {
+            try { await browser.close(); } catch (_) {}
+            browser = null;
+          }
+        }
 
         if (!fs.existsSync(framePngPath)) {
           throw new Error('Lỗi Puppeteer: File text_story_frame.png không được tạo thành công.');
@@ -953,10 +971,10 @@ export class ZTTeamHookVideoService {
         const duration = 10;
 
         // Video chữ tĩnh 100% không zoom chậm, hình ảnh sắc nét, viền và chữ đứng yên vững chắc
-        const ffmpegCmd = `ffmpeg -y -loop 1 -t ${duration} -i "${framePngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[1:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.85[aout]" -map 0:v -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
+        const ffmpegCmd = `ffmpeg -nostdin -y -loop 1 -t ${duration} -i "${framePngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[1:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.85[aout]" -map 0:v -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
 
         await new Promise<void>((resolve, reject) => {
-          exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30 }, (error, stdout, stderr) => {
+          exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30, timeout: 120000 }, (error, stdout, stderr) => {
             if (error) {
               const cleanStderr = (stderr || error.message || '').trim();
               const lines = cleanStderr.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('ffmpeg version') && !l.startsWith('built with') && !l.startsWith('configuration:'));
@@ -1219,57 +1237,75 @@ export class ZTTeamHookVideoService {
 
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      });
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
-      await page.setContent(htmlContent, { waitUntil: 'load' });
-      await page.evaluateHandle('document.fonts.ready');
-
-      // BẢO ĐẢM TỰ ĐỘNG CĂN CHỈNH HOOK IMAGE: 100% NỘI DUNG VÀ FOOTER NẰM TRỌN TRONG VIỀN CARD
-      await page.evaluate(() => {
-        const card = document.querySelector('.hook-card') as HTMLElement;
-        const footer = document.querySelector('.hook-footer') as HTMLElement;
-        const paragraphs = document.querySelectorAll('.hook-p') as NodeListOf<HTMLElement>;
-        const body = document.querySelector('.hook-body') as HTMLElement;
-
-        if (!card || !paragraphs.length) return;
-
-        let pFontSize = parseFloat(window.getComputedStyle(paragraphs[0]).fontSize) || 47;
-        let pGap = body ? parseFloat(window.getComputedStyle(body).gap) || 26 : 26;
-        let lineHeight = 1.38;
-
-        const isOverflowing = () => {
-          if (card.scrollHeight > card.clientHeight + 1) return true;
-          if (footer) {
-            const cardRect = card.getBoundingClientRect();
-            const footerRect = footer.getBoundingClientRect();
-            if (cardRect.bottom - footerRect.bottom < 20) return true;
-          }
-          return false;
-        };
-
-        let iteration = 0;
-        while (isOverflowing() && iteration < 30 && pFontSize > 32) {
-          iteration++;
-          pFontSize -= 1;
-          if (pGap > 12) pGap -= 1;
-          lineHeight = Math.max(1.24, lineHeight - 0.01);
-
-          paragraphs.forEach(p => {
-            p.style.fontSize = `${pFontSize}px`;
-            p.style.lineHeight = `${lineHeight}`;
-          });
-          if (body) {
-            body.style.gap = `${pGap}px`;
-          }
-        }
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote',
+          '--single-process',
+          '--disable-breakpad',
+          '--disable-crash-reporter',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-extensions',
+        ],
       });
 
       const overlayPngPath = path.join(tempDir, 'frame_overlay.png');
-      await page.screenshot({ path: overlayPngPath, omitBackground: true, type: 'png' });
-      await browser.close();
-      browser = null;
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+        await page.setContent(htmlContent, { waitUntil: 'load', timeout: 30000 });
+        await page.evaluateHandle('document.fonts.ready');
+
+        // BẢO ĐẢM TỰ ĐỘNG CĂN CHỈNH HOOK IMAGE: 100% NỘI DUNG VÀ FOOTER NẰM TRỌN TRONG VIỀN CARD
+        await page.evaluate(() => {
+          const card = document.querySelector('.hook-card') as HTMLElement;
+          const footer = document.querySelector('.hook-footer') as HTMLElement;
+          const paragraphs = document.querySelectorAll('.hook-p') as NodeListOf<HTMLElement>;
+          const body = document.querySelector('.hook-body') as HTMLElement;
+
+          if (!card || !paragraphs.length) return;
+
+          let pFontSize = parseFloat(window.getComputedStyle(paragraphs[0]).fontSize) || 47;
+          let pGap = body ? parseFloat(window.getComputedStyle(body).gap) || 26 : 26;
+          let lineHeight = 1.38;
+
+          const isOverflowing = () => {
+            if (card.scrollHeight > card.clientHeight + 1) return true;
+            if (footer) {
+              const cardRect = card.getBoundingClientRect();
+              const footerRect = footer.getBoundingClientRect();
+              if (cardRect.bottom - footerRect.bottom < 20) return true;
+            }
+            return false;
+          };
+
+          let iteration = 0;
+          while (isOverflowing() && iteration < 30 && pFontSize > 32) {
+            iteration++;
+            pFontSize -= 1;
+            if (pGap > 12) pGap -= 1;
+            lineHeight = Math.max(1.24, lineHeight - 0.01);
+
+            paragraphs.forEach(p => {
+              p.style.fontSize = `${pFontSize}px`;
+              p.style.lineHeight = `${lineHeight}`;
+            });
+            if (body) {
+              body.style.gap = `${pGap}px`;
+            }
+          }
+        });
+
+        await page.screenshot({ path: overlayPngPath, omitBackground: true, type: 'png' });
+      } finally {
+        if (browser) {
+          try { await browser.close(); } catch (_) {}
+          browser = null;
+        }
+      }
 
       if (!fs.existsSync(overlayPngPath)) {
         throw new Error('Lỗi Puppeteer: File frame_overlay.png không được tạo thành công.');
@@ -1290,10 +1326,10 @@ export class ZTTeamHookVideoService {
       const outputVideoPath = path.join(videosDir, outputFilename);
       const duration = 10;
 
-      const ffmpegCmd = `ffmpeg -y -loop 1 -t ${duration} -i "${sourceImagePath}" -loop 1 -t ${duration} -i "${overlayPngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[0:v]scale=1080:774:force_original_aspect_ratio=increase,crop=1080:774:(in_w-1080)/2:(in_h-774)/2,scale='1080*(1+0.035*t/${duration})':-1:eval=frame:flags=bicubic,crop=1080:774:(in_w-1080)/2:(in_h-774)/2[fg];color=c=#011114:s=1080x1920:d=${duration}[base];[base][fg]overlay=0:0[with_img];[with_img][1:v]overlay=0:0[vout];[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.4,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.9[aout]" -map "[vout]" -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
+      const ffmpegCmd = `ffmpeg -nostdin -y -loop 1 -t ${duration} -i "${sourceImagePath}" -loop 1 -t ${duration} -i "${overlayPngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[0:v]scale=1080:774:force_original_aspect_ratio=increase,crop=1080:774:(in_w-1080)/2:(in_h-774)/2,scale='1080*(1+0.035*t/${duration})':-1:eval=frame:flags=bicubic,crop=1080:774:(in_w-1080)/2:(in_h-774)/2[fg];color=c=#011114:s=1080x1920:d=${duration}[base];[base][fg]overlay=0:0[with_img];[with_img][1:v]overlay=0:0[vout];[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.4,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.9[aout]" -map "[vout]" -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
 
       await new Promise<void>((resolve, reject) => {
-        exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30 }, (error, stdout, stderr) => {
+        exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30, timeout: 120000 }, (error, stdout, stderr) => {
           if (error) {
             const cleanStderr = (stderr || error.message || '').trim();
             const lines = cleanStderr.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('ffmpeg version') && !l.startsWith('built with') && !l.startsWith('configuration:'));
