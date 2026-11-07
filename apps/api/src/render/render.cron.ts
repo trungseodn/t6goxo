@@ -70,7 +70,7 @@ export class ZTTeamRenderCron implements OnApplicationBootstrap {
 
   /**
    * ZTTeam: Tự động nhặt các bài viết CHƯA ĐĂNG có video_status = 'PENDING' để Render Video Hook 10s
-   * Tối đa 2 video mỗi phút để chạy ngầm êm ái, không làm quá tải CPU/RAM trên VPS
+   * Tối đa 4 video mỗi phút để chạy ngầm êm ái, tăng tốc xử lý hàng chờ mà không làm quá tải CPU/RAM trên VPS
    */
   private async ztteam_autoRenderPendingVideos() {
     try {
@@ -91,7 +91,7 @@ export class ZTTeamRenderCron implements OnApplicationBootstrap {
         },
         include: { page: true },
         orderBy: { created_at: 'desc' },
-        take: 2,
+        take: 4,
       });
 
       if (pendingImages.length === 0) return;
