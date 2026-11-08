@@ -46,6 +46,7 @@ export default function AIFactory() {
   const [limit, setLimit] = useState(24);
   const [isPosting, setIsPosting] = useState<Record<string, boolean>>({});
   const [isRetryingFailedVideos, setIsRetryingFailedVideos] = useState(false);
+  const [isRetryingFailedPublish, setIsRetryingFailedPublish] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { ztteam_showToast, ztteam_showConfirm } = useUIStore();
@@ -219,6 +220,32 @@ export default function AIFactory() {
       ztteam_showToast(error.response?.data?.message || 'Lỗi khi đưa video về hàng chờ', 'error');
     } finally {
       setIsRetryingFailedVideos(false);
+    }
+  };
+
+  /** Đưa các bài / video bị lỗi đăng về lại hàng chờ xuất bản */
+  const ztteam_retryFailedPublish = async (idsToRetry?: string[]) => {
+    const isAll = !idsToRetry || idsToRetry.length === 0;
+    const countText = isAll ? `tất cả ${counts.failed || total || ''}` : `${idsToRetry.length}`;
+    const confirmed = await ztteam_showConfirm(
+      'Đưa video & bài lỗi về hàng chờ',
+      `Bạn có chắc chắn muốn đưa ${countText} bài / video lỗi đăng Fanpage về lại hàng chờ để hệ thống xuất bản không?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsRetryingFailedPublish(true);
+      const res = await api.post('image/retry-failed-publish', {
+        ids: idsToRetry,
+        fbPageId: filterPage || undefined
+      });
+      ztteam_showToast(res.data?.message || 'Đã đưa video và bài lỗi về lại hàng chờ thành công!', 'success');
+      setSelectedIds([]);
+      ztteam_loadItems();
+    } catch (error: any) {
+      ztteam_showToast(error.response?.data?.message || 'Lỗi khi đưa bài về hàng chờ', 'error');
+    } finally {
+      setIsRetryingFailedPublish(false);
     }
   };
 
@@ -511,6 +538,42 @@ export default function AIFactory() {
             >
               <span className={`material-symbols-outlined text-[18px] ${isRetryingFailedVideos ? 'animate-spin' : ''}`}>
                 {isRetryingFailedVideos ? 'sync' : 'replay_circle_filled'}
+              </span>
+              <span>⚡ Đưa Tất Cả Video Lỗi Về Hàng Chờ</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/** Banner Hành Động Riêng Cho Tab Lỗi Đăng Fanpage */}
+      {filterStatus === 'FAILED' && (
+        <div className="bg-gradient-to-r from-amber-950/40 via-fb-surface to-red-950/30 border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30 shadow-inner">
+              <span className="material-symbols-outlined text-2xl">sync_problem</span>
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <span>Quản Lý Bài & Video Lỗi Đăng Fanpage</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {counts.failed || total || 0} bài / video lỗi
+                </span>
+              </h3>
+              <p className="text-xs text-fb-text-muted mt-1 leading-relaxed">
+                Tự động làm mới khung giờ xuất bản, đưa tất cả video và bài viết lỗi đăng trở lại hàng đợi sẵn sàng đăng lên Fanpage.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={() => ztteam_retryFailedPublish()}
+              disabled={isRetryingFailedPublish || (counts.failed === 0 && total === 0)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 via-fb-blue to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${isRetryingFailedPublish ? 'animate-spin' : ''}`}>
+                {isRetryingFailedPublish ? 'sync' : 'replay_circle_filled'}
               </span>
               <span>⚡ Đưa Tất Cả Video Lỗi Về Hàng Chờ</span>
             </button>

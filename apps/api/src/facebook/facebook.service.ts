@@ -719,6 +719,79 @@ export class ZTTeamFacebookService {
       /** Bỏ qua lỗi phụ */
     }
 
+    /**
+     * ZTTeam: Nhận diện các Fanpage gặp sự cố Lỗi Đăng Bài (Publish Error) gần đây (trong vòng 48h).
+     * Chỉ tính là lỗi nếu bài viết FAILED không phải do Checkpoint và chưa có bài POSTED nào sau thời điểm lỗi.
+     */
+    const publishErrorMap = new Map<string, string>();
+    try {
+      const pageIds = pages.map(p => p.id);
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const [failedImages, failedReels] = await Promise.all([
+        this.prisma.ztteam_images.findMany({
+          where: {
+            page_id: { in: pageIds },
+            status: 'FAILED',
+            NOT: { error_log: { contains: '4854002' } },
+            updated_at: { gte: twoDaysAgo }
+          },
+          select: { page_id: true, error_log: true, updated_at: true },
+          orderBy: { updated_at: 'desc' }
+        }),
+        this.prisma.ztteam_reels.findMany({
+          where: {
+            page_id: { in: pageIds },
+            status: 'FAILED',
+            NOT: { error_log: { contains: '4854002' } },
+            updated_at: { gte: twoDaysAgo }
+          },
+          select: { page_id: true, error_log: true, updated_at: true },
+          orderBy: { updated_at: 'desc' }
+        })
+      ]);
+
+      const latestGeneralFailMap = new Map<string, { time: Date; error: string }>();
+      for (const item of [...failedImages, ...failedReels]) {
+        if (item.page_id && !latestGeneralFailMap.has(item.page_id)) {
+          latestGeneralFailMap.set(item.page_id, {
+            time: item.updated_at,
+            error: item.error_log || 'Lỗi xuất bản bài viết lên Facebook'
+          });
+        }
+      }
+
+      for (const p of pages) {
+        if (checkpointPageIds.has(p.id)) continue;
+        const failInfo = latestGeneralFailMap.get(p.id);
+        if (failInfo) {
+          const [hasLaterSuccessImage, hasLaterSuccessReel] = await Promise.all([
+            this.prisma.ztteam_images.findFirst({
+              where: {
+                page_id: p.id,
+                status: 'POSTED',
+                posted_at: { gt: failInfo.time }
+              },
+              select: { id: true }
+            }),
+            this.prisma.ztteam_reels.findFirst({
+              where: {
+                page_id: p.id,
+                status: 'POSTED',
+                posted_at: { gt: failInfo.time }
+              },
+              select: { id: true }
+            })
+          ]);
+
+          if (!hasLaterSuccessImage && !hasLaterSuccessReel) {
+            publishErrorMap.set(p.id, failInfo.error);
+          }
+        }
+      }
+    } catch (e: any) {
+      /** Bỏ qua lỗi phụ */
+    }
+
     const result = await Promise.all(pages.map(async p => {
       const times = await this.ztteam_computePageTimesAndNextVideo(p);
 
@@ -793,6 +866,8 @@ export class ZTTeamFacebookService {
         pendingReelsCount,
         totalPendingCount: pendingImagesCount + pendingReelsCount,
         isCheckpointBlocked: checkpointPageIds.has(p.id),
+        hasPublishError: publishErrorMap.has(p.id),
+        lastPublishError: publishErrorMap.get(p.id) || null,
         /** We do not send accessToken back to frontend for security */
       };
     }));
@@ -872,12 +947,56 @@ export class ZTTeamFacebookService {
       /** Bỏ qua lỗi phụ */
     }
 
+    let hasPublishError = false;
+    let lastPublishError: string | null = null;
+    try {
+      if (!isCheckpointBlocked) {
+        const recentGeneralFail = await this.prisma.ztteam_images.findFirst({
+          where: {
+            page_id: page.id,
+            status: 'FAILED',
+            NOT: { error_log: { contains: '4854002' } },
+            updated_at: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) }
+          },
+          select: { id: true, updated_at: true, error_log: true },
+          orderBy: { updated_at: 'desc' }
+        });
+        if (recentGeneralFail) {
+          const failTime = recentGeneralFail.updated_at;
+          const [hasLaterSuccessImage, hasLaterSuccessReel] = await Promise.all([
+            this.prisma.ztteam_images.findFirst({
+              where: {
+                page_id: page.id,
+                status: 'POSTED',
+                posted_at: { gt: failTime }
+              },
+              select: { id: true }
+            }),
+            this.prisma.ztteam_reels.findFirst({
+              where: {
+                page_id: page.id,
+                status: 'POSTED',
+                posted_at: { gt: failTime }
+              },
+              select: { id: true }
+            })
+          ]);
+          if (!hasLaterSuccessImage && !hasLaterSuccessReel) {
+            hasPublishError = true;
+            lastPublishError = recentGeneralFail.error_log || 'Lỗi xuất bản bài viết lên Facebook';
+          }
+        }
+      }
+    } catch (e: any) {}
+
     return {
       id: page.id,
       fb_page_id: page.fb_page_id,
       name: page.name,
       avatar: page.avatar,
       isCheckpointBlocked,
+      hasPublishError,
+      lastPublishError,
       tags: page.tags,
       cover_url: (page as any).cover_url || null,
       branding: {

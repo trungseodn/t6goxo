@@ -52,6 +52,9 @@ export interface ZTTeamFanpage {
   brandingError?: string | null;
   hasCustomAvatar?: boolean;
   hasCustomCover?: boolean;
+  isCheckpointBlocked?: boolean;
+  hasPublishError?: boolean;
+  lastPublishError?: string | null;
 }
 
 interface ZTTeamFacebookState {

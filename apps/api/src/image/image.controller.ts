@@ -160,6 +160,117 @@ export class ZTTeamImageController {
     };
   }
 
+  /**
+   * ZTTeam: Đưa các bài viết / video bị lỗi xuất bản (status = FAILED) về lại hàng chờ
+   * POST /api/image/retry-failed-publish
+   */
+  @Post('retry-failed-publish')
+  @UseGuards(ZTTeamAuthGuard)
+  async ztteam_retryFailedPublish(
+    @Request() req: any,
+    @Body() body: { ids?: string[]; fbPageId?: string }
+  ) {
+    const where: any = {
+      status: 'FAILED',
+      is_posted: false,
+    };
+
+    if (body?.ids && Array.isArray(body.ids) && body.ids.length > 0) {
+      where.id = { in: body.ids };
+    }
+
+    if (body?.fbPageId) {
+      const p = await this.prisma.ztteam_pages.findFirst({
+        where: { OR: [{ id: body.fbPageId }, { fb_page_id: body.fbPageId }] },
+        select: { id: true },
+      });
+      if (p) where.page_id = p.id;
+    } else if (req.user?.sub) {
+      where.OR = [
+        { page: { fb_account: { owner_user_id: req.user.sub } } },
+        { page_id: null },
+      ];
+    }
+
+    const failedPosts = await this.prisma.ztteam_images.findMany({
+      where,
+      include: { page: true },
+    });
+
+    if (failedPosts.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        message: 'Không có bài hoặc video lỗi nào cần đưa về hàng chờ.',
+      };
+    }
+
+    const completedIds: string[] = [];
+    const queuedIds: string[] = [];
+
+    for (const post of failedPosts) {
+      if (post.video_url || post.image_url || post.video_status === 'COMPLETED') {
+        completedIds.push(post.id);
+      } else {
+        queuedIds.push(post.id);
+      }
+    }
+
+    let updatedCount = 0;
+    if (completedIds.length > 0) {
+      const res = await this.prisma.ztteam_images.updateMany({
+        where: { id: { in: completedIds } },
+        data: {
+          status: 'COMPLETED',
+          error_log: null,
+          post_retry_count: 0,
+          is_posted: false,
+        },
+      });
+      updatedCount += res.count;
+    }
+
+    if (queuedIds.length > 0) {
+      const res = await this.prisma.ztteam_images.updateMany({
+        where: { id: { in: queuedIds } },
+        data: {
+          status: 'QUEUED',
+          error_log: null,
+          post_retry_count: 0,
+          is_posted: false,
+        },
+      });
+      updatedCount += res.count;
+    }
+
+    // Nếu bài viết đó đồng thời bị lỗi render video -> Reset video_status về PENDING
+    const videoFailedIds = failedPosts.filter(p => p.video_status === 'FAILED').map(p => p.id);
+    if (videoFailedIds.length > 0) {
+      await this.prisma.ztteam_images.updateMany({
+        where: { id: { in: videoFailedIds } },
+        data: { video_status: 'PENDING', error_log: null },
+      });
+    }
+
+    for (const post of failedPosts) {
+      const nextStatus = (post.video_url || post.image_url || post.video_status === 'COMPLETED') ? 'COMPLETED' : 'QUEUED';
+      this.eventEmitter.emit('image.updated', {
+        id: post.id,
+        status: nextStatus,
+        error_log: null,
+        post_retry_count: 0,
+        is_posted: false,
+        video_status: post.video_status === 'FAILED' ? 'PENDING' : post.video_status,
+      });
+    }
+
+    return {
+      success: true,
+      count: updatedCount,
+      message: `Đã đưa ${updatedCount} bài / video lỗi đăng Fanpage về lại hàng chờ thành công.`,
+    };
+  }
+
   @Get('list')
   @UseGuards(ZTTeamAuthGuard)
   async ztteam_listImages(

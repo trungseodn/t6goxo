@@ -204,6 +204,30 @@ function FanpageCard({ page, isExpired, testingPageId, handleTestPost, handleTog
                   </div>
                 </div>
               )}
+              {page.hasPublishError && !page.isCheckpointBlocked && (
+                <div className="relative group/pubErrBadge shrink-0 cursor-help">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm animate-pulse">
+                    <span className="material-symbols-outlined text-[13px] text-rose-400">unpublished</span>
+                    <span>Lỗi đăng bài</span>
+                  </span>
+
+                  {/** Tooltip giải thích chi tiết khi hover */}
+                  <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-80 p-3.5 bg-[#0b1329] rounded-xl border border-rose-500/30 shadow-2xl z-50 invisible group-hover/pubErrBadge:visible opacity-0 group-hover/pubErrBadge:opacity-100 transition-all pointer-events-none text-left">
+                    <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs mb-1.5">
+                      <span className="material-symbols-outlined text-sm">error</span>
+                      <span>Bài Đăng Gần Nhất Bị Lỗi</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-mono bg-black/30 p-2 rounded border border-white/5 break-words max-h-36 overflow-y-auto">
+                      {page.lastPublishError || 'Lỗi không xác định khi xuất bản bài viết lên Facebook qua Graph API.'}
+                    </p>
+                    <div className="mt-2.5 pt-2 border-t border-white/10 text-[10px] text-blue-400 font-medium space-y-1">
+                      <div className="font-bold text-slate-200">👉 Hướng dẫn khắc phục:</div>
+                      <div>1. Kiểm tra lại quyền Admin hoặc hạn Token của Fanpage</div>
+                      <div>2. Vào AI Factory kiểm tra lại bài viết bị lỗi và bấm thử lại</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2 mt-1 text-[11px] font-medium text-fb-text-muted">
               <span className="truncate block">Nick: <b className="text-blue-400">{page.ownerName || 'Admin'}</b></span>
@@ -274,6 +298,10 @@ function FanpageCard({ page, isExpired, testingPageId, handleTestPost, handleTog
         ) : page.isCheckpointBlocked ? (
           <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-full text-[10px] font-extrabold shrink-0 flex items-center gap-1 shadow-sm border border-amber-500/30">
             <span className="material-symbols-outlined text-xs text-amber-400">shield_lock</span> Chờ xác minh
+          </span>
+        ) : page.hasPublishError ? (
+          <span className="px-2.5 py-1 bg-rose-500/20 text-rose-300 rounded-full text-[10px] font-extrabold shrink-0 flex items-center gap-1 shadow-sm border border-rose-500/30">
+            <span className="material-symbols-outlined text-xs text-rose-400">unpublished</span> Lỗi đăng
           </span>
         ) : (
           <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-extrabold shrink-0 flex items-center gap-1 shadow-sm">
@@ -611,6 +639,32 @@ export default function FacebookPages() {
   const [filterBusiness, setFilterBusiness] = useState('');
   const [filterTag, setFilterTag] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
+  type HealthFilter = 'all' | 'checkpoint' | 'publish_error' | 'token_error' | 'missing_config' | 'healthy';
+  const [filterHealth, setFilterHealth] = useState<HealthFilter>('all');
+
+  /** Kiểm tra Fanpage có bị thiếu cấu hình không */
+  const isPageMissingConfig = (p: any) => {
+    const sourcesCount = p.sourcesCount ?? 0;
+    const pendingImages = p.pendingImagesCount ?? 0;
+    const pendingReels = p.pendingReelsCount ?? 0;
+    const totalPending = p.totalPendingCount ?? (pendingImages + pendingReels);
+    const fixedTimes = p.scheduleFixedTimes || [];
+    return (
+      sourcesCount === 0 ||
+      (p.scheduleMode === 'fixed' && fixedTimes.length === 0) ||
+      p.autoPublishEnabled === false ||
+      totalPending === 0
+    );
+  };
+
+  /** Kiểm tra Fanpage có hoàn toàn khỏe mạnh không */
+  const isPageHealthy = (p: any) => {
+    const isExpired = p.status === 'expired';
+    const isCheckpoint = !!p.isCheckpointBlocked;
+    const hasPubError = !!p.hasPublishError;
+    const isMissing = isPageMissingConfig(p);
+    return !isExpired && !isCheckpoint && !hasPubError && !isMissing && p.isActive !== false;
+  };
 
   /** State quản lý chọn hàng loạt */
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
@@ -657,6 +711,31 @@ export default function FacebookPages() {
   const uniqueBusinesses = Array.from(new Set(pages.map(p => p.businessName).filter(Boolean)));
   const uniqueTags = Array.from(new Set(pages.flatMap(p => p.tags || [])));
 
+  // Danh sách Page cơ sở để tính bộ đếm số lượng sức khỏe (tuân theo Tab Đang chạy/Đã tắt và các bộ lọc tìm kiếm/BM/Nick)
+  const baseHealthPages = pages.filter(p => {
+    if (pageTab === 'active' && p.isActive === false) return false;
+    if (pageTab === 'deactivated' && p.isActive !== false) return false;
+    if (filterOwner && p.ownerName !== filterOwner) return false;
+    if (filterBusiness && p.businessName !== filterBusiness) return false;
+    if (filterTag && (!p.tags || !p.tags.includes(filterTag))) return false;
+    if (filterSearch && filterSearch.trim().length > 0) {
+      const q = filterSearch.toLowerCase().trim();
+      const nameMatch = (p.name || '').toLowerCase().includes(q);
+      const idMatch = (p.fb_page_id || p.id || '').toLowerCase().includes(q);
+      if (!nameMatch && !idMatch) return false;
+    }
+    return true;
+  });
+
+  const healthCounts = {
+    total: baseHealthPages.length,
+    checkpoint: baseHealthPages.filter(p => p.isCheckpointBlocked).length,
+    publish_error: baseHealthPages.filter(p => p.hasPublishError && !p.isCheckpointBlocked).length,
+    token_error: baseHealthPages.filter(p => p.status === 'expired').length,
+    missing_config: baseHealthPages.filter(p => isPageMissingConfig(p)).length,
+    healthy: baseHealthPages.filter(p => isPageHealthy(p)).length,
+  };
+
   const filteredPages = pages.filter(p => {
     let match = true;
     if (filterOwner && p.ownerName !== filterOwner) match = false;
@@ -668,6 +747,11 @@ export default function FacebookPages() {
       const idMatch = (p.fb_page_id || p.id || '').toLowerCase().includes(q);
       if (!nameMatch && !idMatch) match = false;
     }
+    if (filterHealth === 'checkpoint' && !p.isCheckpointBlocked) match = false;
+    if (filterHealth === 'publish_error' && (!p.hasPublishError || p.isCheckpointBlocked)) match = false;
+    if (filterHealth === 'token_error' && p.status !== 'expired') match = false;
+    if (filterHealth === 'missing_config' && !isPageMissingConfig(p)) match = false;
+    if (filterHealth === 'healthy' && !isPageHealthy(p)) match = false;
     return match;
   });
 
@@ -1248,6 +1332,133 @@ export default function FacebookPages() {
               <span className={`material-symbols-outlined text-base shrink-0 ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
             </button>
           </div>
+        </div>
+
+        {/** Thanh Bộ Lọc Trạng Thái Sức Khỏe Fanpage (Lỗi đăng bài, Checkpoint, Lỗi Token, Cần cấu hình, Hoạt động tốt) */}
+        <div className="px-4 sm:px-5 py-2.5 bg-slate-900/40 border-b border-fb-surface-hover/30 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[11px] font-bold text-fb-text-muted shrink-0 mr-1 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px] text-cyan-400">filter_alt</span>
+            <span>Trạng thái:</span>
+          </span>
+
+          {/** Tất cả */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth('all')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              filterHealth === 'all'
+                ? 'bg-fb-blue text-white shadow-md shadow-blue-500/20'
+                : 'bg-fb-surface-hover/80 text-fb-text-muted hover:text-fb-text hover:bg-fb-surface-hover'
+            }`}
+          >
+            <span>Tất cả</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterHealth === 'all' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'}`}>
+              {healthCounts.total}
+            </span>
+          </button>
+
+          {/** Chờ xác minh danh tính (Checkpoint) */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth(filterHealth === 'checkpoint' ? 'all' : 'checkpoint')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              filterHealth === 'checkpoint'
+                ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/20'
+                : healthCounts.checkpoint > 0
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+                : 'bg-fb-surface-hover/50 text-slate-400 border-transparent hover:text-fb-text'
+            }`}
+          >
+            <span className={`material-symbols-outlined text-[14px] text-amber-400 ${healthCounts.checkpoint > 0 ? 'animate-pulse' : ''}`}>
+              shield_lock
+            </span>
+            <span>Chờ xác minh</span>
+            {healthCounts.checkpoint > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/30 text-amber-200 font-black">
+                {healthCounts.checkpoint}
+              </span>
+            )}
+          </button>
+
+          {/** Lỗi đăng bài */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth(filterHealth === 'publish_error' ? 'all' : 'publish_error')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              filterHealth === 'publish_error'
+                ? 'bg-rose-500/25 text-rose-300 border-rose-500/50 shadow-md shadow-rose-500/20'
+                : healthCounts.publish_error > 0
+                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                : 'bg-fb-surface-hover/50 text-slate-400 border-transparent hover:text-fb-text'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px] text-rose-400">unpublished</span>
+            <span>Lỗi đăng bài</span>
+            {healthCounts.publish_error > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/30 text-rose-200 font-black">
+                {healthCounts.publish_error}
+              </span>
+            )}
+          </button>
+
+          {/** Lỗi Token */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth(filterHealth === 'token_error' ? 'all' : 'token_error')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              filterHealth === 'token_error'
+                ? 'bg-red-500/25 text-red-300 border-red-500/50 shadow-md shadow-red-500/20'
+                : healthCounts.token_error > 0
+                ? 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+                : 'bg-fb-surface-hover/50 text-slate-400 border-transparent hover:text-fb-text'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px] text-red-400">key_off</span>
+            <span>Lỗi Token</span>
+            {healthCounts.token_error > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-red-500/30 text-red-200 font-black">
+                {healthCounts.token_error}
+              </span>
+            )}
+          </button>
+
+          {/** Cần cấu hình */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth(filterHealth === 'missing_config' ? 'all' : 'missing_config')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              filterHealth === 'missing_config'
+                ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/20'
+                : healthCounts.missing_config > 0
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+                : 'bg-fb-surface-hover/50 text-slate-400 border-transparent hover:text-fb-text'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px] text-amber-400">warning</span>
+            <span>Cần cấu hình</span>
+            {healthCounts.missing_config > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/30 text-amber-200 font-black">
+                {healthCounts.missing_config}
+              </span>
+            )}
+          </button>
+
+          {/** Đang hoạt động tốt */}
+          <button
+            type="button"
+            onClick={() => setFilterHealth(filterHealth === 'healthy' ? 'all' : 'healthy')}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              filterHealth === 'healthy'
+                ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50 shadow-md shadow-emerald-500/20'
+                : 'bg-fb-surface-hover/50 text-slate-300 border-transparent hover:bg-emerald-500/10 hover:text-emerald-300'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
+            <span>Hoạt động tốt</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-bold">
+              {healthCounts.healthy}
+            </span>
+          </button>
         </div>
 
         {/** Thanh Thao Tác Chọn Hàng Loạt Nhanh */}
