@@ -210,7 +210,7 @@ export class ZTTeamCrawlerCron implements OnApplicationBootstrap {
         maxArticlesPerCycle = Math.max(1, Math.min(20, parseInt(rules.batchSize, 10)));
       }
       if (rules.maxScanPages && Number(rules.maxScanPages) > 0) {
-        maxScanPages = Math.max(5, Math.min(50, parseInt(rules.maxScanPages, 10)));
+        maxScanPages = Math.max(1, Math.min(500, parseInt(rules.maxScanPages, 10)));
       }
       keepContentImages = Boolean(rules.keepContentImages);
     } catch (e) {}

@@ -741,16 +741,16 @@ export default function WordPressSites() {
                                 <div className="flex items-center justify-between p-3.5 bg-fb-surface rounded-2xl border border-white/5">
                                   <div>
                                     <span className="text-xs font-bold text-fb-text block">Độ sâu phân trang & Load More</span>
-                                    <span className="text-[11px] text-fb-text-muted block mt-0.5">Số trang tối đa bot sẽ quét sâu qua phân trang hoặc nút Load More để vét sạch bài cũ.</span>
+                                    <span className="text-[11px] text-fb-text-muted block mt-0.5">Số trang tối đa bot sẽ quét sâu qua phân trang hoặc nút Load More để vét sạch bài cũ (mặc định 20, tối đa 500 trang).</span>
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     <input
                                       type="number"
                                       min={1}
-                                      max={50}
+                                      max={500}
                                       value={maxScanPages}
-                                      onChange={(e) => setMaxScanPages(Math.max(1, Math.min(50, parseInt(e.target.value) || 20)))}
-                                      className="w-16 py-1 px-2.5 rounded-full bg-fb-surface-hover text-fb-text text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-fb-blue border border-white/10"
+                                      onChange={(e) => setMaxScanPages(Math.max(1, Math.min(500, parseInt(e.target.value) || 20)))}
+                                      className="w-20 py-1 px-2.5 rounded-full bg-fb-surface-hover text-fb-text text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-fb-blue border border-white/10"
                                       required
                                     />
                                     <span className="text-xs text-fb-text-muted font-bold">trang</span>
