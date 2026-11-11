@@ -314,7 +314,7 @@ export class ZTTeamHookVideoService {
           if (child && child.pid && !child.killed) {
             this.logger.warn(`FFmpeg process ${child.pid} timed out after ${timeoutMs}ms. Force killing process tree...`);
             if (isLinux) {
-              exec(`pkill -P ${child.pid} -9 2>/dev/null; kill -9 ${child.pid} 2>/dev/null`).catch(() => {});
+              exec(`pkill -P ${child.pid} -9 2>/dev/null; kill -9 ${child.pid} 2>/dev/null`, () => {});
             } else {
               child.kill('SIGKILL');
             }
