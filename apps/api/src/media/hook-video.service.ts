@@ -269,6 +269,7 @@ export function ztteam_getTextStoryTheme(pageIdOrName?: string) {
 @Injectable()
 export class ZTTeamHookVideoService {
   private readonly logger = new Logger('ZTTeamHookVideoService');
+  private activeRenders = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -279,44 +280,97 @@ export class ZTTeamHookVideoService {
   ) { }
 
   /**
+   * Thực thi FFmpeg với cơ chế an toàn:
+   * - nice -n 15: Giảm ưu tiên CPU để không gây lag server
+   * - killSignal: 'SIGKILL' + timer force-kill độc lập đảm bảo không bao giờ để lại tiến trình zombie
+   */
+  private async ztteam_execFfmpeg(cmd: string, timeoutMs: number = 120000): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const isLinux = process.platform === 'linux';
+      const niceCmd = isLinux ? `nice -n 15 ${cmd}` : cmd;
+      let timer: NodeJS.Timeout | null = null;
+
+      const child = exec(niceCmd, {
+        maxBuffer: 1024 * 1024 * 30,
+        timeout: timeoutMs,
+        killSignal: 'SIGKILL',
+      }, (error, stdout, stderr) => {
+        if (timer) clearTimeout(timer);
+        if (error) {
+          const cleanStderr = (stderr || error.message || '').trim();
+          const lines = cleanStderr
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0 && !l.startsWith('ffmpeg version') && !l.startsWith('built with') && !l.startsWith('configuration:'));
+          const actualError = lines.slice(-3).join(' | ') || error.message;
+          reject(new Error(actualError));
+        } else {
+          resolve();
+        }
+      });
+
+      timer = setTimeout(() => {
+        try {
+          if (child && child.pid && !child.killed) {
+            this.logger.warn(`FFmpeg process ${child.pid} timed out after ${timeoutMs}ms. Force killing process tree...`);
+            if (isLinux) {
+              exec(`pkill -P ${child.pid} -9 2>/dev/null; kill -9 ${child.pid} 2>/dev/null`).catch(() => {});
+            } else {
+              child.kill('SIGKILL');
+            }
+          }
+        } catch (_) {}
+      }, timeoutMs + 1000);
+    });
+  }
+
+  /**
    * ZTTeam: Render video Reel 10s siêu sắc nét từ hình ảnh Hook hoặc Text Story kính mờ Frosted Glass
    */
   async ztteam_renderHookVideo(
     imageId: string,
     options?: { bgmFilename?: string; forceRegenHook?: boolean; videoEngine?: string }
   ): Promise<{ success: boolean; videoUrl?: string; error?: string }> {
-    this.logger.log(`===== START HOOK/TEXT STORY VIDEO RENDER: image=${imageId} =====`);
-
-    const imageRecord = await this.prisma.ztteam_images.findUnique({
-      where: { id: imageId },
-      include: { page: true },
-    });
-
-    if (!imageRecord) {
-      throw new Error(`Không tìm thấy bài viết ${imageId}`);
+    if (this.activeRenders.has(imageId)) {
+      this.logger.warn(`Render cho bài viết ${imageId} đang diễn ra, bỏ qua yêu cầu gọi trùng lặp.`);
+      return { success: false, error: 'Video đang được tạo, vui lòng đợi...' };
     }
+    this.activeRenders.add(imageId);
 
-    /** ZTTeam: Người dùng yêu cầu chỉ render bài CHƯA ĐĂNG, bài đã đăng rồi bỏ qua để tiết kiệm tài nguyên */
-    if (imageRecord.is_posted && !options?.forceRegenHook) {
-      this.logger.log(`Bài viết ${imageId} đã đăng lên Fanpage (is_posted = true), bỏ qua không render video.`);
-      return { success: true, videoUrl: imageRecord.video_url || undefined };
-    }
-
-    /** Cập nhật trạng thái đang xử lý */
-    await this.prisma.ztteam_images.update({
-      where: { id: imageId },
-      data: { video_status: 'PENDING', error_log: null },
-    });
-    this.eventEmitter.emit('image.updated', { id: imageId, video_status: 'PENDING' });
-
-    const tempDir = path.join(ztteam_getImagesPath(imageId), 'temp_hook_render');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
+    let tempDir = '';
     let browser: any = null;
+    let imageRecord: any = null;
 
     try {
+      this.logger.log(`===== START HOOK/TEXT STORY VIDEO RENDER: image=${imageId} =====`);
+
+      imageRecord = await this.prisma.ztteam_images.findUnique({
+        where: { id: imageId },
+        include: { page: true },
+      });
+
+      if (!imageRecord) {
+        throw new Error(`Không tìm thấy bài viết ${imageId}`);
+      }
+
+      /** ZTTeam: Người dùng yêu cầu chỉ render bài CHƯA ĐĂNG, bài đã đăng rồi bỏ qua để tiết kiệm tài nguyên */
+      if (imageRecord.is_posted && !options?.forceRegenHook) {
+        this.logger.log(`Bài viết ${imageId} đã đăng lên Fanpage (is_posted = true), bỏ qua không render video.`);
+        return { success: true, videoUrl: imageRecord.video_url || undefined };
+      }
+
+      /** Cập nhật trạng thái PROCESSING ngay lập tức để RenderCron hoặc các luồng khác không quét trùng */
+      await this.prisma.ztteam_images.update({
+        where: { id: imageId },
+        data: { video_status: 'PROCESSING', error_log: null },
+      });
+      this.eventEmitter.emit('image.updated', { id: imageId, video_status: 'PROCESSING' });
+
+      const runId = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      tempDir = path.join(ztteam_getImagesPath(imageId), `temp_hook_render_${runId}`);
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
       const engine = options?.videoEngine || (imageRecord.page as any)?.video_engine || 'hook_image';
 
       /** 1. Chuẩn bị ảnh nguồn (đối với hook_image thì bắt buộc, text_story có thể linh hoạt) */
@@ -971,22 +1025,10 @@ export class ZTTeamHookVideoService {
         const duration = 10;
 
         // Video chữ tĩnh 100% không zoom chậm, hình ảnh sắc nét, viền và chữ đứng yên vững chắc
-        const ffmpegCmd = `ffmpeg -nostdin -y -loop 1 -t ${duration} -i "${framePngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[1:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.85[aout]" -map 0:v -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
+        const ffmpegCmd = `ffmpeg -nostdin -y -threads 2 -loop 1 -t ${duration} -i "${framePngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[1:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.85[aout]" -map 0:v -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
 
-        await new Promise<void>((resolve, reject) => {
-          exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30, timeout: 120000 }, (error, stdout, stderr) => {
-            if (error) {
-              const cleanStderr = (stderr || error.message || '').trim();
-              const lines = cleanStderr.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('ffmpeg version') && !l.startsWith('built with') && !l.startsWith('configuration:'));
-              const actualError = lines.slice(-3).join(' | ') || error.message;
-              this.logger.error(`FFmpeg text story render error: ${error.message}\n${cleanStderr}`);
-              reject(new Error(actualError));
-            } else {
-              this.logger.log(`FFmpeg text story render completed: ${outputFilename}`);
-              resolve();
-            }
-          });
-        });
+        await this.ztteam_execFfmpeg(ffmpegCmd, 120000);
+        this.logger.log(`FFmpeg text story render completed: ${outputFilename}`);
 
         const videoUrl = `/storage/videos/${outputFilename}`;
 
@@ -1326,22 +1368,10 @@ export class ZTTeamHookVideoService {
       const outputVideoPath = path.join(videosDir, outputFilename);
       const duration = 10;
 
-      const ffmpegCmd = `ffmpeg -nostdin -y -loop 1 -t ${duration} -i "${sourceImagePath}" -loop 1 -t ${duration} -i "${overlayPngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[0:v]scale=1080:774:force_original_aspect_ratio=increase,crop=1080:774:(in_w-1080)/2:(in_h-774)/2,scale='1080*(1+0.035*t/${duration})':-1:eval=frame:flags=bicubic,crop=1080:774:(in_w-1080)/2:(in_h-774)/2[fg];color=c=#011114:s=1080x1920:d=${duration}[base];[base][fg]overlay=0:0[with_img];[with_img][1:v]overlay=0:0[vout];[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.4,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.9[aout]" -map "[vout]" -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
+      const ffmpegCmd = `ffmpeg -nostdin -y -threads 2 -loop 1 -t ${duration} -i "${sourceImagePath}" -loop 1 -t ${duration} -i "${overlayPngPath}" -t ${duration} -i "${audioPath}" -filter_complex "[0:v]scale=1080:774:force_original_aspect_ratio=increase,crop=1080:774:(in_w-1080)/2:(in_h-774)/2,scale='1080*(1+0.035*t/${duration})':-1:eval=frame:flags=bicubic,crop=1080:774:(in_w-1080)/2:(in_h-774)/2[fg];color=c=#011114:s=1080x1920:d=${duration}[base];[base][fg]overlay=0:0[with_img];[with_img][1:v]overlay=0:0[vout];[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.4,afade=t=out:st=${duration - 1.5}:d=1.5,volume=0.9[aout]" -map "[vout]" -map "[aout]" -c:v libx264 -crf 18 -preset medium -pix_fmt yuv420p -r 30 -b:v 8M -maxrate 12M -bufsize 16M -c:a aac -b:a 192k -t ${duration} "${outputVideoPath}"`;
 
-      await new Promise<void>((resolve, reject) => {
-        exec(ffmpegCmd, { maxBuffer: 1024 * 1024 * 30, timeout: 120000 }, (error, stdout, stderr) => {
-          if (error) {
-            const cleanStderr = (stderr || error.message || '').trim();
-            const lines = cleanStderr.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('ffmpeg version') && !l.startsWith('built with') && !l.startsWith('configuration:'));
-            const actualError = lines.slice(-3).join(' | ') || error.message;
-            this.logger.error(`FFmpeg render error: ${error.message}\n${cleanStderr}`);
-            reject(new Error(actualError));
-          } else {
-            this.logger.log(`FFmpeg render completed: ${outputFilename}`);
-            resolve();
-          }
-        });
-      });
+      await this.ztteam_execFfmpeg(ffmpegCmd, 120000);
+      this.logger.log(`FFmpeg render completed: ${outputFilename}`);
 
       const videoUrl = `/storage/videos/${outputFilename}`;
 
@@ -1404,6 +1434,13 @@ export class ZTTeamHookVideoService {
       }
 
       return { success: false, error: ztteam_extractErrorMessage(err) };
+    } finally {
+      this.activeRenders.delete(imageId);
+      try {
+        if (tempDir && fs.existsSync(tempDir)) {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+      } catch (_) {}
     }
   }
 }

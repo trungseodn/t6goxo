@@ -196,8 +196,8 @@ export class ZTTeamTTSService {
   private ztteam_generateSilentAudio(outputPath: string, durationSec: number): string {
     try {
       execSync(
-        `ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${durationSec} -q:a 9 "${outputPath}"`,
-        { stdio: 'pipe' },
+        `ffmpeg -nostdin -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${durationSec} -q:a 9 "${outputPath}"`,
+        { stdio: 'pipe', timeout: 10000 },
       );
     } catch {
       /** If ffmpeg fails, create a tiny placeholder file */

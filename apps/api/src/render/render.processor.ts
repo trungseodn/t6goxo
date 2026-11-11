@@ -429,8 +429,8 @@ export class ZTTeamRenderProcessor implements OnModuleInit {
 
       const audioMap = hasAudio ? `-map "[a]" -c:a aac -b:a 128k` : `-an`;
 
-      /** Tối ưu tốc độ: Sử dụng preset superfast để render nhanh hơn đáng kể */
-      await exec(`ffmpeg -loglevel warning -i "${rawVideoPath}" -i "${gradPngPath}" -filter_complex "${filterComplex}" -map "[v_out]" ${audioMap} -c:v libx264 -preset superfast -crf 23 "${outputPath}" -y`);
+      /** Tối ưu tốc độ: Sử dụng preset superfast và ffmpegService an toàn (nice -n 15, timeout, sigkill) */
+      await this.ffmpegService.ztteam_runFfmpeg(`ffmpeg -nostdin -loglevel warning -threads 2 -i "${rawVideoPath}" -i "${gradPngPath}" -filter_complex "${filterComplex}" -map "[v_out]" ${audioMap} -c:v libx264 -preset superfast -crf 23 "${outputPath}" -y`, 180000);
 
       await this.ztteam_updateReel(reelId, { progress: 95 });
 

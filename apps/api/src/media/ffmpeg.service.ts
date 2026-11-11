@@ -21,7 +21,7 @@ export class ZTTeamFFmpegService {
   async ztteam_runFfmpeg(cmd: string, timeoutMs: number = 180000): Promise<void> {
     const isLinux = process.platform === 'linux';
     const finalCmd = isLinux ? `nice -n 15 ${cmd}` : cmd;
-    await execAsync(finalCmd, { maxBuffer: 10 * 1024 * 1024, timeout: timeoutMs });
+    await execAsync(finalCmd, { maxBuffer: 10 * 1024 * 1024, timeout: timeoutMs, killSignal: 'SIGKILL' });
   }
 
   /**
