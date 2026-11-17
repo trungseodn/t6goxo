@@ -86,7 +86,7 @@ export class ZTTeamFFmpegService {
 
       /** Step 3: Render smooth bicubic zoom (eval=frame calculates sub-pixel bicubic on each frame with 0 jitter) */
       const zoomFactor = motionStyle === 'cinematic_zoom' ? 0.18 : 0.12;
-      const compositeCmd = `ffmpeg -y -loop 1 -t ${duration} -i "${bgPath}" -loop 1 -t ${duration} -i "${fgBasePath}" -filter_complex "[1:v]scale='${vw}*(1+${zoomFactor}*t/${duration})':-1:eval=frame:flags=bicubic[fg];[0:v][fg]overlay=(W-w)/2:(H-h)/2" -c:v libx264 -preset veryfast -pix_fmt yuv420p "${outputPath}"`;
+      const compositeCmd = `ffmpeg -y -loop 1 -t ${duration} -i "${bgPath}" -loop 1 -t ${duration} -i "${fgBasePath}" -filter_complex "[1:v]scale='${vw}*(1+${zoomFactor}*t/${duration})':-1:eval=frame:flags=bicubic[fg];[0:v][fg]overlay=(W-w)/2:(H-h)/2" -c:v libx264 -threads 2 -preset veryfast -pix_fmt yuv420p "${outputPath}"`;
       await this.ztteam_runFfmpeg(compositeCmd, 60000);
 
       this.logger.log(`Butter-smooth motion video created: ${outputPath}`);
@@ -175,7 +175,7 @@ export class ZTTeamFFmpegService {
 
     filterComplex = filterComplex.replace(/;+$/, '');
 
-    const cmd = `ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[vout]" -c:v libx264 -preset fast -t ${totalDuration} "${outputPath}"`;
+    const cmd = `ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[vout]" -c:v libx264 -threads 2 -preset fast -t ${totalDuration} "${outputPath}"`;
 
     try {
       await this.ztteam_runFfmpeg(cmd, 120000);
@@ -241,7 +241,7 @@ export class ZTTeamFFmpegService {
       audioMap = '-map 3:a';
     }
 
-    const cmd = `ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[vout]" ${audioMap} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -shortest -t ${duration} "${outputPath}"`;
+    const cmd = `ffmpeg -y ${inputs} -filter_complex "${filterComplex}" -map "[vout]" ${audioMap} -c:v libx264 -threads 2 -preset fast -crf 23 -c:a aac -b:a 128k -shortest -t ${duration} "${outputPath}"`;
 
     try {
       await this.ztteam_runFfmpeg(cmd, 180000);
