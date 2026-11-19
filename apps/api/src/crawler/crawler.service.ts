@@ -6,7 +6,7 @@ import { ZTTeamFetcherService } from './fetcher.service';
 import { ZTTeamWordpressService } from '../wordpress/wordpress.service';
 import { ZTTeamStoryTestService } from '../story-test/story-test.service';
 import { ZTTeamHookVideoService } from '../media/hook-video.service';
-import { ztteam_getImagesPath, ztteam_getStorageRoot } from '../common/ztteam_storage.util';
+import { ztteam_getImagesPath, ztteam_getStorageRoot, ztteam_rewriteUrlForFacebook, ztteam_rewriteTextForFacebook } from '../common/ztteam_storage.util';
 
 @Injectable()
 export class ZTTeamCrawlerService {
@@ -256,16 +256,17 @@ export class ZTTeamCrawlerService {
     }
 
     let createdImageId: string | undefined = undefined;
+    const publicPostUrl = ztteam_rewriteUrlForFacebook(wpResult.url);
 
     for (const targetPage of targetPages) {
       /** Prepare Caption & First Comment based on Facebook Viral standard */
       const captionCTA = '...FULL STORY IN THE COMMENT 👇👇👇';
       let fanpageCaption = `${titleUppercase}\n\n${part1}\n\n${captionCTA}`;
       if (targetPage.add_link_to_caption) {
-        fanpageCaption += `\n\n👉 Read full story here: ${wpResult.url}`;
+        fanpageCaption += `\n\n👉 Read full story here: ${publicPostUrl}`;
       }
 
-      const commentCTA = `👉 FULL STORY HERE 👇👇👇\n${wpResult.url}`;
+      const commentCTA = `👉 FULL STORY HERE 👇👇👇\n${publicPostUrl}`;
       let firstCommentText: string | null = part2 ? `${part2}\n\n${commentCTA}` : commentCTA;
 
       let imgRecord = await this.prisma.ztteam_images.findFirst({
@@ -282,11 +283,11 @@ export class ZTTeamCrawlerService {
           where: { id: imgRecord.id },
           data: {
             wp_post_title: storyTitle,
-            wp_post_url: wpResult.url,
+            wp_post_url: publicPostUrl,
             template_id: currentTemplateId,
             image_url: image2kUrl,
-            ai_caption: fanpageCaption,
-            ai_first_comment: firstCommentText,
+            ai_caption: ztteam_rewriteTextForFacebook(fanpageCaption),
+            ai_first_comment: ztteam_rewriteTextForFacebook(firstCommentText),
             comment_step: 0,
             status: 'COMPLETED',
             video_status: shouldAutoQueueVideo ? 'PENDING' : 'NONE',
@@ -300,11 +301,11 @@ export class ZTTeamCrawlerService {
             page_id: targetPage.id,
             wp_post_id: wpResult.id.toString(),
             wp_post_title: storyTitle,
-            wp_post_url: wpResult.url,
+            wp_post_url: publicPostUrl,
             template_id: currentTemplateId,
             image_url: image2kUrl,
-            ai_caption: fanpageCaption,
-            ai_first_comment: firstCommentText,
+            ai_caption: ztteam_rewriteTextForFacebook(fanpageCaption),
+            ai_first_comment: ztteam_rewriteTextForFacebook(firstCommentText),
             comment_step: 0,
             status: 'COMPLETED', /** Ready for publisher.cron to post to Facebook! */
             video_status: shouldAutoQueueVideo ? 'PENDING' : 'NONE',
@@ -352,9 +353,10 @@ export class ZTTeamCrawlerService {
 
     /** ZTTeam: Trường hợp KHÔNG CÓ Fanpage nào hoạt động -> Lưu bài viết vào Kho Đăng Thủ Công độc lập (page_id = null) */
     if (targetPages.length === 0) {
+      const publicPostUrl = ztteam_rewriteUrlForFacebook(wpResult.url);
       const captionCTA = '...FULL STORY IN THE COMMENT 👇👇👇';
       const fanpageCaption = `${titleUppercase}\n\n${part1}\n\n${captionCTA}`;
-      const commentCTA = `👉 FULL STORY HERE 👇👇👇\n${wpResult.url}`;
+      const commentCTA = `👉 FULL STORY HERE 👇👇👇\n${publicPostUrl}`;
       const firstCommentText = part2 ? `${part2}\n\n${commentCTA}` : commentCTA;
 
       let imgRecord = await this.prisma.ztteam_images.findFirst({
@@ -369,11 +371,11 @@ export class ZTTeamCrawlerService {
           where: { id: imgRecord.id },
           data: {
             wp_post_title: storyTitle,
-            wp_post_url: wpResult.url,
+            wp_post_url: publicPostUrl,
             template_id: currentTemplateId,
             image_url: image2kUrl,
-            ai_caption: fanpageCaption,
-            ai_first_comment: firstCommentText,
+            ai_caption: ztteam_rewriteTextForFacebook(fanpageCaption),
+            ai_first_comment: ztteam_rewriteTextForFacebook(firstCommentText),
             comment_step: 0,
             status: 'COMPLETED',
             video_status: imgRecord.video_url ? 'COMPLETED' : 'PENDING',
@@ -387,11 +389,11 @@ export class ZTTeamCrawlerService {
             page_id: null,
             wp_post_id: wpResult.id.toString(),
             wp_post_title: storyTitle,
-            wp_post_url: wpResult.url,
+            wp_post_url: publicPostUrl,
             template_id: currentTemplateId,
             image_url: image2kUrl,
-            ai_caption: fanpageCaption,
-            ai_first_comment: firstCommentText,
+            ai_caption: ztteam_rewriteTextForFacebook(fanpageCaption),
+            ai_first_comment: ztteam_rewriteTextForFacebook(firstCommentText),
             comment_step: 0,
             status: 'COMPLETED',
             video_status: 'PENDING',

@@ -68,3 +68,25 @@ export function ztteam_ensureStorageDirs(): void {
     /** Bỏ qua nếu không thể copy */
   }
 }
+
+/**
+ * ZTTeam: Chuyển đổi URL bài viết từ website WordPress đích (st.melyweb.net hoặc story.banglaixegiare.com)
+ * sang domain trực tiếp đăng lên Facebook (lifeofmystory.com) theo cơ chế Direct
+ */
+export function ztteam_rewriteUrlForFacebook(url?: string | null): string {
+  if (!url) return '';
+  return url
+    .replace(/^https?:\/\/st\.melyweb\.net/gi, 'https://lifeofmystory.com')
+    .replace(/^https?:\/\/story\.banglaixegiare\.com/gi, 'https://lifeofmystory.com');
+}
+
+/**
+ * ZTTeam: Chuyển đổi mọi link trong nội dung văn bản (Caption, First comment, Reply Part 2)
+ * sang domain lifeofmystory.com trước khi đăng lên Facebook
+ */
+export function ztteam_rewriteTextForFacebook(text?: string | null): string {
+  if (!text) return '';
+  return text
+    .replace(/https?:\/\/st\.melyweb\.net/gi, 'https://lifeofmystory.com')
+    .replace(/https?:\/\/story\.banglaixegiare\.com/gi, 'https://lifeofmystory.com');
+}

@@ -5,7 +5,7 @@ import { ZTTeamFacebookService } from '../facebook/facebook.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ztteam_getReelsPath, ztteam_getImagesPath, ztteam_getStorageRoot } from '../common/ztteam_storage.util';
+import { ztteam_getReelsPath, ztteam_getImagesPath, ztteam_getStorageRoot, ztteam_rewriteUrlForFacebook, ztteam_rewriteTextForFacebook } from '../common/ztteam_storage.util';
 import { TelegramService, ztteam_extractErrorMessage } from '../telegram/telegram.service';
 
 /**
@@ -414,7 +414,8 @@ export class ZTTeamPublisherCron {
 
       const utmMedium = slugify(page?.fb_account?.name || 'account');
       const utmCampaign = slugify(page?.name || 'page');
-      const trackingLink = reel.wp_post_url ? `${reel.wp_post_url}${reel.wp_post_url.includes('?') ? '&' : '?'}utm_source=reel&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}` : '';
+      const rawPostUrl = ztteam_rewriteUrlForFacebook(reel.wp_post_url);
+      const trackingLink = rawPostUrl ? `${rawPostUrl}${rawPostUrl.includes('?') ? '&' : '?'}utm_source=reel&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}` : '';
 
       const isViewThreshold = page.link_mode === 'view_threshold';
       const isNone = page.link_mode === 'none';
@@ -431,6 +432,8 @@ export class ZTTeamPublisherCron {
         const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
         description = `${prefix} ${trackingLink}\n\n${description}`;
       }
+
+      description = ztteam_rewriteTextForFacebook(description);
 
       const response = await this.facebookService.ztteam_publishReel(
         page.fb_page_id,
@@ -451,7 +454,7 @@ export class ZTTeamPublisherCron {
           await this.facebookService.ztteam_publishComment(
             page.fb_page_id,
             response.id,
-            `${commentPrefix} ${trackingLink}`
+            ztteam_rewriteTextForFacebook(`${commentPrefix} ${trackingLink}`)
           );
         } catch (e: any) {
           this.logger.error(`Failed to post comment for reel ${reel.id}: ${e.message}`);
@@ -598,7 +601,8 @@ export class ZTTeamPublisherCron {
 
       const utmMedium = slugify(page?.fb_account?.name || 'account');
       const utmCampaign = slugify(page?.name || 'page');
-      const trackingLink = image.wp_post_url ? `${image.wp_post_url}${image.wp_post_url.includes('?') ? '&' : '?'}utm_source=image&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}` : '';
+      const rawPostUrl = ztteam_rewriteUrlForFacebook(image.wp_post_url);
+      const trackingLink = rawPostUrl ? `${rawPostUrl}${rawPostUrl.includes('?') ? '&' : '?'}utm_source=image&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}` : '';
 
       const isViewThreshold = page.link_mode === 'view_threshold';
       const isNone = page.link_mode === 'none';
@@ -615,6 +619,8 @@ export class ZTTeamPublisherCron {
         const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
         caption = `${prefix} ${trackingLink}\n\n${caption}`;
       }
+
+      caption = ztteam_rewriteTextForFacebook(caption);
 
       let fbPostId: string;
       /** ZTTeam: Nếu bài viết đã tạo Video Reel và không bắt buộc chỉ đăng ảnh, ưu tiên xuất bản Reel/Video lên Facebook */
@@ -661,7 +667,7 @@ export class ZTTeamPublisherCron {
           await this.facebookService.ztteam_publishComment(
             page.fb_page_id,
             fbPostId,
-            `${commentPrefix} ${trackingLink}`
+            ztteam_rewriteTextForFacebook(`${commentPrefix} ${trackingLink}`)
           );
         } catch (e: any) {
           this.logger.error(`Failed to post immediate comment for image ${image.id}: ${e.message}`);
@@ -930,14 +936,17 @@ export class ZTTeamPublisherCron {
           const isExpired5Hours = hookAgeMinutes >= 300; /** Đủ 5 tiếng (300 phút) */
 
           /** Chuẩn bị nội dung reply Part 2 + link bài viết */
-          let replyContent = img.ai_first_comment;
+          let replyContent = ztteam_rewriteTextForFacebook(img.ai_first_comment);
           if (!replyContent || replyContent === 'NO_LINK') {
             const utmMedium = this.ztteam_slugify(img.page?.fb_account?.name || 'account');
             const utmCampaign = this.ztteam_slugify(img.page?.name || 'page');
-            const trackingLink = img.wp_post_url
-              ? `${img.wp_post_url}${img.wp_post_url.includes('?') ? '&' : '?'}utm_source=image&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`
+            const rawUrl = ztteam_rewriteUrlForFacebook(img.wp_post_url);
+            const trackingLink = rawUrl
+              ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}utm_source=image&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`
               : '';
             replyContent = `👉 FULL STORY HERE 👇👇👇\n${trackingLink}`;
+          } else {
+            replyContent = ztteam_rewriteTextForFacebook(replyContent);
           }
 
           if (isExpired5Hours) {
@@ -1207,8 +1216,9 @@ export class ZTTeamPublisherCron {
       // Chuẩn bị tracking link
       const utmMedium = this.ztteam_slugify(page?.fb_account?.name || 'account');
       const utmCampaign = this.ztteam_slugify(page?.name || 'page');
-      const trackingLink = item.wp_post_url
-        ? `${item.wp_post_url}${item.wp_post_url.includes('?') ? '&' : '?'}utm_source=reel&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`
+      const rawUrl = ztteam_rewriteUrlForFacebook(item.wp_post_url);
+      const trackingLink = rawUrl
+        ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}utm_source=reel&utm_medium=${utmMedium}&utm_campaign=${utmCampaign}`
         : '';
 
       const updateData: any = {
