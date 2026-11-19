@@ -43,7 +43,7 @@ export class ZTTeamWordpressService {
           timeout: 5000
         })
       );
-      const contentType = testRes.headers['content-type'] || '';
+      const contentType = String(testRes.headers['content-type'] || '');
       if (testRes.status === 301 || (testRes.status === 200 && contentType.includes('text/html'))) {
         prefix = `${cleanUrl}/index.php?rest_route=`;
         this.logger.log(`[ZTTeamWordpressService] Site ${cleanUrl} uses plain permalinks, routing via ${prefix}`);
