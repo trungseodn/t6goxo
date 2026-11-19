@@ -22,6 +22,55 @@ export class ZTTeamWordpressService {
     this.encryptionKey = crypto.scryptSync(secret, 'salt', 32);
   }
 
+  private restPrefixCache = new Map<string, string>();
+
+  /**
+   * ZTTeam: Tự động phát hiện cấu hình Permalinks của site WordPress
+   * Hỗ trợ mượt mà cả Pretty Permalinks (/wp-json/wp/v2/...) lẫn Plain Permalinks (/index.php?rest_route=/wp/v2/...)
+   */
+  async ztteam_getRestPrefix(wpUrl: string): Promise<string> {
+    const cleanUrl = wpUrl.replace(/\/+$/, '');
+    if (this.restPrefixCache.has(cleanUrl)) {
+      return this.restPrefixCache.get(cleanUrl)!;
+    }
+
+    let prefix = `${cleanUrl}/wp-json`;
+    try {
+      const testRes = await firstValueFrom(
+        this.httpService.get(`${cleanUrl}/wp-json/wp/v2/posts?per_page=1`, {
+          validateStatus: () => true,
+          maxRedirects: 0,
+          timeout: 5000
+        })
+      );
+      const contentType = testRes.headers['content-type'] || '';
+      if (testRes.status === 301 || (testRes.status === 200 && contentType.includes('text/html'))) {
+        prefix = `${cleanUrl}/index.php?rest_route=`;
+        this.logger.log(`[ZTTeamWordpressService] Site ${cleanUrl} uses plain permalinks, routing via ${prefix}`);
+      }
+    } catch {
+      // Keep default /wp-json
+    }
+
+    this.restPrefixCache.set(cleanUrl, prefix);
+    return prefix;
+  }
+
+  async ztteam_buildEndpoint(baseUrl: string, endpoint: string): Promise<string> {
+    const prefix = await this.ztteam_getRestPrefix(baseUrl);
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    if (prefix.includes('?')) {
+      const [path, query] = normalizedEndpoint.split('?');
+      if (query) {
+        return `${prefix}${path}&${query}`;
+      }
+      return `${prefix}${path}`;
+    }
+
+    return `${prefix}${normalizedEndpoint}`;
+  }
+
   private ztteam_encrypt(text: string): string {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
@@ -76,9 +125,10 @@ export class ZTTeamWordpressService {
     try {
       const cleanUrl = wpUrl.replace(/\/$/, '');
       const authHeader = 'Basic ' + Buffer.from(`${wpUsername}:${wpAppPassword}`).toString('base64');
+      const endpoint = await this.ztteam_buildEndpoint(cleanUrl, '/wp/v2/users/me');
 
       const response = await firstValueFrom(
-        this.httpService.get(`${cleanUrl}/wp-json/wp/v2/users/me`, {
+        this.httpService.get(endpoint, {
           headers: {
             Authorization: authHeader,
           },
@@ -201,8 +251,9 @@ export class ZTTeamWordpressService {
     mimeType: string
   ): Promise<{ id: number; source_url: string }> {
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, '/wp/v2/media');
       const response = await firstValueFrom(
-        this.httpService.post(`${wpUrl}/wp-json/wp/v2/media`, buffer, {
+        this.httpService.post(endpoint, buffer, {
           headers: {
             Authorization: authHeader,
             'Content-Disposition': `attachment; filename="${filename}"`,
@@ -215,7 +266,7 @@ export class ZTTeamWordpressService {
         source_url: response.data.source_url
       };
     } catch (error: any) {
-      this.logger.error(`Failed to upload media to WordPress at ${wpUrl}/wp-json/wp/v2/media`, error.response?.data || error.message);
+      this.logger.error(`Failed to upload media to WordPress at ${wpUrl}`, error.response?.data || error.message);
       throw error;
     }
   }
@@ -226,8 +277,9 @@ export class ZTTeamWordpressService {
     mediaId: number
   ): Promise<boolean> {
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, `/wp/v2/media/${mediaId}?force=true`);
       await firstValueFrom(
-        this.httpService.delete(`${wpUrl}/wp-json/wp/v2/media/${mediaId}?force=true`, {
+        this.httpService.delete(endpoint, {
           headers: { Authorization: authHeader }
         })
       );
@@ -246,9 +298,10 @@ export class ZTTeamWordpressService {
     featuredMediaId: number
   ): Promise<boolean> {
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, `/wp/v2/posts/${postId}`);
       await firstValueFrom(
         this.httpService.post(
-          `${wpUrl}/wp-json/wp/v2/posts/${postId}`,
+          endpoint,
           { featured_media: featuredMediaId },
           {
             headers: {
@@ -272,8 +325,9 @@ export class ZTTeamWordpressService {
     postId: string | number
   ): Promise<boolean> {
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, `/wp/v2/posts/${postId}?force=true`);
       await firstValueFrom(
-        this.httpService.delete(`${wpUrl}/wp-json/wp/v2/posts/${postId}?force=true`, {
+        this.httpService.delete(endpoint, {
           headers: { Authorization: authHeader }
         })
       );
@@ -371,21 +425,24 @@ export class ZTTeamWordpressService {
       }
 
       /** 1. Check if post with same title already exists */
+      const searchEndpoint = await this.ztteam_buildEndpoint(cleanUrl, '/wp/v2/posts');
       const searchResponse = await firstValueFrom(
-        this.httpService.get(`${cleanUrl}/wp-json/wp/v2/posts`, {
+        this.httpService.get(searchEndpoint, {
           headers: { Authorization: authHeader },
           params: { search: data.title, status: 'any' }
         })
       );
 
-      const existingPost = searchResponse.data.find((p: any) => p.title.rendered === data.title || p.title.raw === data.title);
+      const postsArray = Array.isArray(searchResponse.data) ? searchResponse.data : [];
+      const existingPost = postsArray.find((p: any) => p.title?.rendered === data.title || p.title?.raw === data.title);
 
       let response;
       if (existingPost) {
         /** Update existing post */
+        const updateEndpoint = await this.ztteam_buildEndpoint(cleanUrl, `/wp/v2/posts/${existingPost.id}`);
         response = await firstValueFrom(
           this.httpService.post(
-            `${cleanUrl}/wp-json/wp/v2/posts/${existingPost.id}`,
+            updateEndpoint,
             payload,
             {
               headers: {
@@ -397,9 +454,10 @@ export class ZTTeamWordpressService {
         );
       } else {
         /** Create new post */
+        const createEndpoint = await this.ztteam_buildEndpoint(cleanUrl, '/wp/v2/posts');
         response = await firstValueFrom(
           this.httpService.post(
-            `${cleanUrl}/wp-json/wp/v2/posts`,
+            createEndpoint,
             payload,
             {
               headers: {
@@ -416,7 +474,7 @@ export class ZTTeamWordpressService {
         url: response.data.link
       };
     } catch (error: any) {
-      this.logger.error(`Failed to create post on WordPress at ${cleanUrl}/wp-json/wp/v2/posts`, error.response?.data || error.message);
+      this.logger.error(`Failed to create post on WordPress at ${cleanUrl}`, error.response?.data || error.message);
       throw new HttpException(
         error.response?.data?.message || 'Failed to create post on WordPress',
         HttpStatus.BAD_REQUEST
@@ -439,15 +497,17 @@ export class ZTTeamWordpressService {
     let wpUrl = site.wp_url.replace(/\/$/, '');
 
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, '/wp/v2/categories');
       const response = await firstValueFrom(
-        this.httpService.get(`${wpUrl}/wp-json/wp/v2/categories`, {
+        this.httpService.get(endpoint, {
           headers: { Authorization: authHeader },
           params: { per_page: 100 },
           timeout: 10000,
         })
       );
 
-      return response.data.map((cat: any) => ({
+      const catArray = Array.isArray(response.data) ? response.data : [];
+      return catArray.map((cat: any) => ({
         id: cat.id,
         name: cat.name,
         count: cat.count
@@ -473,15 +533,17 @@ export class ZTTeamWordpressService {
     let wpUrl = site.wp_url.replace(/\/$/, '');
 
     try {
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, '/wp/v2/tags');
       const response = await firstValueFrom(
-        this.httpService.get(`${wpUrl}/wp-json/wp/v2/tags`, {
+        this.httpService.get(endpoint, {
           headers: { Authorization: authHeader },
           params: { per_page: 100 },
           timeout: 10000,
         })
       );
 
-      return response.data.map((tag: any) => ({
+      const tagArray = Array.isArray(response.data) ? response.data : [];
+      return tagArray.map((tag: any) => ({
         id: tag.id,
         name: tag.name,
         count: tag.count
@@ -511,15 +573,17 @@ export class ZTTeamWordpressService {
       if (categoryId) params.categories = categoryId;
       if (targetTags) params.tags = targetTags;
 
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, '/wp/v2/posts');
       const response = await firstValueFrom(
-        this.httpService.get(`${wpUrl}/wp-json/wp/v2/posts`, {
+        this.httpService.get(endpoint, {
           headers: { Authorization: authHeader },
           params,
           timeout: 12000,
         })
       );
 
-      return response.data.map((p: any) => {
+      const postsArray = Array.isArray(response.data) ? response.data : [];
+      return postsArray.map((p: any) => {
         const rawContent = p.content?.rendered || p.title?.rendered || '';
         const cleanContent = rawContent.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
         const rawExcerpt = p.excerpt?.rendered || cleanContent.substring(0, 180);
@@ -572,16 +636,18 @@ export class ZTTeamWordpressService {
       if (categoryId) params.categories = categoryId;
       if (targetTags) params.tags = targetTags;
 
+      const endpoint = await this.ztteam_buildEndpoint(wpUrl, '/wp/v2/posts');
       const response = await firstValueFrom(
-        this.httpService.get(`${wpUrl}/wp-json/wp/v2/posts`, {
+        this.httpService.get(endpoint, {
           headers: { Authorization: authHeader },
           params,
           timeout: 10000,
         })
       );
 
-      if (response.data && response.data.length > 0) {
-        const post = response.data[0];
+      const postsArray = Array.isArray(response.data) ? response.data : [];
+      if (postsArray.length > 0) {
+        const post = postsArray[0];
         /** Strip HTML from content */
         const rawContent = post.content?.rendered || post.title?.rendered || '';
         const cleanContent = rawContent.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
