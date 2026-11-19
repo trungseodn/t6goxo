@@ -266,13 +266,23 @@ export class ZTTeamPublisherCron {
         let selectedItem: { type: 'reel_legacy' | 'image_reel' | 'image_only'; data: any } | null = null;
 
         if (post_format === 'reel') {
-          /** Cấu hình: Nếu chọn reel thì đăng reel, nếu bài chuẩn bị đăng ko có reel thì đăng ảnh (đảm bảo phải có bài để đăng) */
+          /** Cấu hình: Nếu chọn reel thì ưu tiên tuyệt đối đăng reel */
           if (allAvailableReels.length > 0) {
             selectedItem = allAvailableReels[0];
-          } else if (allAvailableImages.length > 0) {
-            selectedItem = allAvailableImages[0];
-          } else if (pageImagesWithVideo.length > 0) {
-            selectedItem = { type: 'image_only', data: pageImagesWithVideo[0] };
+          } else {
+            /** Nếu bài viết của Page đang trong quá trình render video (PENDING / PROCESSING) -> Chờ render xong, KHÔNG đăng ép dạng ảnh */
+            const isRenderingVideo = pendingImages.some(
+              i => i.page_id === pageId && (i.video_status === 'PENDING' || i.video_status === 'PROCESSING')
+            );
+            if (isRenderingVideo) {
+              this.logger.log(`Page ${page.name}: Video Reel đang được render (PENDING/PROCESSING). Chờ video render hoàn tất để xuất bản Reel đúng chuẩn.`);
+              continue;
+            }
+            if (allAvailableImages.length > 0) {
+              selectedItem = allAvailableImages[0];
+            } else if (pageImagesWithVideo.length > 0) {
+              selectedItem = { type: 'image_only', data: pageImagesWithVideo[0] };
+            }
           }
         } else if (post_format === 'image') {
           /** Cấu hình: Nếu chọn ảnh thì chắc chắn phải đăng ảnh */
@@ -291,13 +301,22 @@ export class ZTTeamPublisherCron {
               selectedItem = { type: 'image_only', data: pageImagesWithVideo[0] };
             }
           } else {
-            /** Lượt trước đăng Ảnh -> Lượt này đăng Reel. Trường hợp reel ko có vẫn đăng ảnh */
+            /** Lượt trước đăng Ảnh -> Lượt này đăng Reel */
             if (allAvailableReels.length > 0) {
               selectedItem = allAvailableReels[0];
-            } else if (allAvailableImages.length > 0) {
-              selectedItem = allAvailableImages[0];
-            } else if (pageImagesWithVideo.length > 0) {
-              selectedItem = { type: 'image_only', data: pageImagesWithVideo[0] };
+            } else {
+              const isRenderingVideo = pendingImages.some(
+                i => i.page_id === pageId && (i.video_status === 'PENDING' || i.video_status === 'PROCESSING')
+              );
+              if (isRenderingVideo) {
+                this.logger.log(`Page ${page.name}: Video Reel đang được render cho lượt xen kẽ (mixed). Chờ video hoàn tất.`);
+                continue;
+              }
+              if (allAvailableImages.length > 0) {
+                selectedItem = allAvailableImages[0];
+              } else if (pageImagesWithVideo.length > 0) {
+                selectedItem = { type: 'image_only', data: pageImagesWithVideo[0] };
+              }
             }
           }
         }

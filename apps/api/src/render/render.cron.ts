@@ -74,12 +74,23 @@ export class ZTTeamRenderCron implements OnApplicationBootstrap {
    */
   private async ztteam_autoRenderPendingVideos() {
     try {
-      /** ZTTeam: Chỉ tự động render Hook Video cho các Page cấu hình hook_image hoặc text_story. TUYỆT ĐỐI không chạm vào bài của Page Muse! */
+      /** Tự động hồi phục các video bị treo PROCESSING quá 8 phút */
+      const eightMinutesAgo = new Date(Date.now() - 8 * 60 * 1000);
+      await this.prisma.ztteam_images.updateMany({
+        where: {
+          is_posted: false,
+          video_status: 'PROCESSING',
+          updated_at: { lt: eightMinutesAgo },
+        },
+        data: { video_status: 'PENDING' },
+      });
+
+      /** ZTTeam: Chỉ tự động render Hook Video cho các Page cấu hình hook_image hoặc text_story. Tự động phục hồi cả video PENDING và FAILED */
       const pendingImages = await this.prisma.ztteam_images.findMany({
         where: {
           is_posted: false,
           status: { not: 'POSTED' },
-          video_status: 'PENDING',
+          video_status: { in: ['PENDING', 'FAILED'] },
           OR: [
             { page_id: null },
             {
